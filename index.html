@@ -191,12 +191,6 @@
         <button onclick="switchTab('eventos')" id="nav-eventos" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
           <i data-lucide="calendar" class="w-5 h-5"></i> Eventos
         </button>
-        <button onclick="switchTab('cursos')" id="nav-cursos" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
-          <i data-lucide="graduation-cap" class="w-5 h-5"></i> Escuela Bíblica
-        </button>
-        <button onclick="switchTab('configuracion')" id="nav-configuracion" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
-          <i data-lucide="shield-check" class="w-5 h-5"></i> Seguridad & Permisos
-        </button>
       </nav>
     </div>
 
@@ -249,7 +243,7 @@
           <i data-lucide="clock" class="w-4 h-4"></i> Solicitudes pendientes: <span id="cnt-solicitudes">0</span>
         </button>
         <span class="bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-blue-100">
-          <i data-lucide="rocket" class="w-4 h-4"></i> Módulos: 8/8 Activos
+          <i data-lucide="rocket" class="w-4 h-4"></i> Módulos: 9/9 Activos
         </span>
       </div>
     </div>
@@ -300,18 +294,12 @@
       </div>
       <p class="text-[11px] text-slate-400 -mt-2">💡 Hacé clic en cualquier tarjeta para ver su evolución durante todo el año.</p>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
           <div class="flex justify-between items-center mb-4">
             <div><h3 class="font-bold text-slate-800">Miembros Activos</h3><p class="text-xs text-slate-400">Progreso registrado</p></div>
           </div>
           <div class="h-52"><canvas id="chartMiembros"></canvas></div>
-        </div>
-        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div class="flex justify-between items-center mb-4">
-            <div><h3 class="font-bold text-slate-800">Servicio Dominical</h3><p class="text-xs text-slate-400">Asistencia proyectada</p></div>
-          </div>
-          <div class="h-52"><canvas id="chartAsistencia"></canvas></div>
         </div>
         <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
           <div class="flex justify-between items-center mb-4">
@@ -1143,8 +1131,6 @@
         <div id="calendario-grid" class="grid grid-cols-7 border-t border-slate-100"></div>
       </div>
     </div>
-    <div id="view-cursos" class="tab-content hidden space-y-6"><div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm"><h3 class="font-bold">Módulo Escuela Bíblica</h3></div></div>
-    <div id="view-configuracion" class="tab-content hidden space-y-6"><div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm"><h3 class="font-bold">Módulo Configuración</h3></div></div>
 
   </main>
 
@@ -1205,6 +1191,9 @@
     let eventoEspecialEditandoId = null;
     let diaSeleccionadoCalendario = null; // se inicializa en "hoy" la primera vez que se abre el calendario
     let listenersFirestoreActivos = []; // para poder "desconectar" al cerrar sesión
+    // Para no guardar la "foto" del día con datos a medio cargar: esperamos a que estas
+    // colecciones hayan traído su primer resultado antes de calcular el historial diario.
+    let listenersListosParaSnapshot = { miembros: false, prospectos: false, asistencias: false, historicoDiario: false };
 
     function guardarMemoria() {
       renderGruposDropdowns();
@@ -1220,13 +1209,15 @@
       actualizarInterfazUsuario();
     }
 
-    // Guarda (o actualiza si ya existe) la "foto" de hoy con los valores actuales del panel.
-    // Así, día a día, se arma el historial que permite ver si una estadística subió o bajó.
+    // Guarda la "foto" de hoy con los valores actuales del panel, siempre sobreescribiendo
+    // (así el día se va corrigiendo solo si algo cambia). Así se arma el historial que
+    // permite ver si una estadística subió o bajó. Espera a que miembros/prospectos/
+    // asistencias/historicoDiario ya hayan cargado, para no guardar un "0" a mitad de carga.
     function registrarSnapshotDiario() {
       if (!usuarioActivo || usuarioActivo.rol !== 'Anfitrión Súper Admin') return; // solo hace falta un registro por día para toda la iglesia
-      const hoy = new Date().toISOString().split('T')[0];
-      if (historicoDiario.some(h => h.fecha === hoy)) return; // ya se registró hoy (el listener ya lo trajo)
+      if (!Object.values(listenersListosParaSnapshot).every(Boolean)) return;
 
+      const hoy = new Date().toISOString().split('T')[0];
       const consolidadosCnt = prospectos.filter(p => p.etapa === 'Consolidados').length;
       const pctConsolidacion = prospectos.length > 0 ? Math.round((consolidadosCnt / prospectos.length) * 100) : 0;
       const pctAsistencia = calcularPctAsistenciaCelulas();
@@ -1246,6 +1237,7 @@
     function detenerListenersFirestore() {
       listenersFirestoreActivos.forEach(desconectar => desconectar());
       listenersFirestoreActivos = [];
+      listenersListosParaSnapshot = { miembros: false, prospectos: false, asistencias: false, historicoDiario: false };
     }
 
     function iniciarListenersFirestore() {
@@ -1268,7 +1260,9 @@
       listenersFirestoreActivos.push(
         db.collection('miembros').onSnapshot(snap => {
           miembros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          listenersListosParaSnapshot.miembros = true;
           guardarMemoria();
+          registrarSnapshotDiario();
         }, () => {})
       );
 
@@ -1297,14 +1291,18 @@
       listenersFirestoreActivos.push(
         db.collection('prospectos').onSnapshot(snap => {
           prospectos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          listenersListosParaSnapshot.prospectos = true;
           guardarMemoria();
+          registrarSnapshotDiario();
         }, () => {})
       );
 
       listenersFirestoreActivos.push(
         db.collection('asistencias').onSnapshot(snap => {
           asistencias = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          listenersListosParaSnapshot.asistencias = true;
           guardarMemoria();
+          registrarSnapshotDiario();
         }, () => {})
       );
 
@@ -1318,6 +1316,7 @@
       listenersFirestoreActivos.push(
         db.collection('historicoDiario').onSnapshot(snap => {
           historicoDiario = snap.docs.map(d => d.data());
+          listenersListosParaSnapshot.historicoDiario = true;
           registrarSnapshotDiario();
         }, () => {})
       );
@@ -2554,7 +2553,6 @@
 
     let chartsCreados = false;
     let chartMiembrosInstance = null;
-    let chartAsistenciaInstance = null;
     let chartProspectosInstance = null;
     let chartProyeccionInstance = null;
 
@@ -2587,7 +2585,6 @@
       });
 
       chartMiembrosInstance = new Chart(document.getElementById('chartMiembros').getContext('2d'), config('#2563eb', []));
-      chartAsistenciaInstance = new Chart(document.getElementById('chartAsistencia').getContext('2d'), config('#f59e0b', []));
       chartProspectosInstance = new Chart(document.getElementById('chartProspectos').getContext('2d'), config('#a855f7', []));
 
       chartProyeccionInstance = new Chart(document.getElementById('chartProyeccion').getContext('2d'), {
@@ -2620,11 +2617,6 @@
         chartMiembrosInstance.data.labels = etiquetas;
         chartMiembrosInstance.data.datasets[0].data = datosMiembros;
         chartMiembrosInstance.update();
-      }
-      if (chartAsistenciaInstance) {
-        chartAsistenciaInstance.data.labels = etiquetas;
-        chartAsistenciaInstance.data.datasets[0].data = etiquetas.map(() => 0);
-        chartAsistenciaInstance.update();
       }
       if (chartProspectosInstance) {
         chartProspectosInstance.data.labels = etiquetas;
@@ -2895,7 +2887,7 @@
     /* ============ PERMISOS POR ROL ============ */
 
     const NAV_POR_ROL = {
-      'Anfitrión Súper Admin': ['dashboard', 'miembros', 'lideres', 'asistencia', 'consolidacion', 'grupos', 'ministerios', 'comunicaciones', 'eventos', 'cursos', 'configuracion'],
+      'Anfitrión Súper Admin': ['dashboard', 'miembros', 'lideres', 'asistencia', 'consolidacion', 'grupos', 'ministerios', 'comunicaciones', 'eventos'],
       'Líder': ['miembros', 'asistencia', 'eventos'],
       'Consolidador': ['consolidacion', 'eventos']
     };

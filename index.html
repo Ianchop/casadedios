@@ -1807,22 +1807,28 @@
       const valForm = selForm.value;
 
       selFiltro.innerHTML = '<option value="">Todos los grupos</option>';
-      selForm.innerHTML = '<option value="Sin grupo">Sin grupo</option>';
-
       grupos.forEach(g => {
         selFiltro.innerHTML += `<option value="${g}">${g}</option>`;
-        selForm.innerHTML += `<option value="${g}">${g}</option>`;
       });
-
       selFiltro.value = valFiltro;
-      selForm.value = valForm;
+
+      // Formulario de "Nuevo Miembro": si quien está agregando es un Líder, solo puede elegir
+      // entre los grupos/ministerios que él mismo maneja. Si maneja uno solo, se preselecciona.
+      const esLiderActivo = !!usuarioActivo && usuarioActivo.rol === 'Líder';
+      const gruposParaForm = esLiderActivo ? getGruposDeLider(usuarioActivo) : grupos;
+
+      selForm.innerHTML = '<option value="Sin grupo">Sin grupo</option>' +
+        gruposParaForm.map(g => `<option value="${g}">${g}</option>`).join('');
+      selForm.value = (esLiderActivo && gruposParaForm.length === 1) ? gruposParaForm[0] : valForm;
 
       const selMinForm = document.getElementById('input-ministerio-form');
       if (selMinForm) {
         const valMinForm = selMinForm.value;
+        const ministeriosParaForm = esLiderActivo ? getMinisteriosDeLider(usuarioActivo) : ministerios.map(m => m.nombre);
+
         selMinForm.innerHTML = '<option value="Sin ministerio">Sin ministerio</option>' +
-          ministerios.map(m => `<option value="${m.nombre}">${m.nombre}</option>`).join('');
-        selMinForm.value = valMinForm;
+          ministeriosParaForm.map(nombre => `<option value="${nombre}">${nombre}</option>`).join('');
+        selMinForm.value = (esLiderActivo && ministeriosParaForm.length === 1) ? ministeriosParaForm[0] : valMinForm;
       }
     }
 

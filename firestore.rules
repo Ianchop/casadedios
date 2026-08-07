@@ -30,6 +30,10 @@ service cloud.firestore {
       );
     }
 
+    function esLiderDeEsteMinisterio(nombreMinisterio) {
+      return esLider() && nombreMinisterio in miPerfil().liderMinisterios;
+    }
+
     // Perfiles de usuario: nombre, correo, rol, estado de aprobación, grupos/ministerios a cargo.
     // Cada quien puede LEER su propio perfil (para saber si ya lo aprobaron); el admin lee todos.
     // Al crearse, una cuenta nueva solo puede quedar "pendiente" y sin rol — nadie se puede
@@ -58,22 +62,29 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Miembros de la iglesia.
+    // Miembros de la iglesia. Un líder solo puede CREAR un miembro nuevo dentro de "Sin grupo"
+    // o de uno de los grupos que él mismo maneja (no puede asignarlo a un grupo ajeno).
     match /miembros/{id} {
       allow read: if estaAprobado();
       // Un consolidador puede CREAR un miembro (pasa cuando marca un prospecto como "Consolidado"),
       // pero no editar ni borrar miembros existentes.
-      allow create: if isAdmin() || esLider() || miPerfil().rol == 'Consolidador';
+      allow create: if isAdmin()
+        || (esLider() && (request.resource.data.grupo == 'Sin grupo' || request.resource.data.grupo in miPerfil().liderGrupos))
+        || miPerfil().rol == 'Consolidador';
       allow update, delete: if isAdmin() || esLider();
     }
 
     // Ministerios (con sus eventos internos anidados). Solo el admin los gestiona,
-    // salvo que un líder únicamente esté actualizando la lista de integrantes
-    // (eso pasa cuando se asigna un ministerio desde la ficha de un miembro).
+    // salvo que un líder únicamente esté actualizando la lista de integrantes de un
+    // ministerio que ÉL mismo lidera (eso pasa al asignar un ministerio desde la ficha
+    // de un miembro, o desde "Nuevo Miembro").
     match /ministerios/{id} {
       allow read: if estaAprobado();
       allow create, delete: if isAdmin();
-      allow update: if isAdmin() || (esLider() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['miembros']));
+      allow update: if isAdmin() || (
+        esLiderDeEsteMinisterio(resource.data.nombre) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['miembros'])
+      );
     }
 
     // Prospectos / seguimiento de consolidación.

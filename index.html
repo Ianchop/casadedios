@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>cdd.app - Plataforma Integral de Gestión Eclesial</title>
+  <title>Casa De Dios - Plataforma Integral de Gestión Eclesial</title>
+  <link rel="icon" href="logo.jpg">
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
@@ -30,10 +31,8 @@
   <div id="auth-screen" class="h-screen w-full flex items-center justify-center bg-slate-100 p-4">
     <div class="w-full max-w-md">
       <div class="flex items-center justify-center gap-3 mb-6">
-        <div class="bg-blue-600 text-white p-2.5 rounded-xl flex items-center justify-center shadow-sm">
-          <i data-lucide="church" class="w-6 h-6"></i>
-        </div>
-        <span class="font-bold text-2xl text-slate-900 tracking-tight">cdd<span class="text-blue-600">.app</span></span>
+        <img src="logo.jpg" alt="Casa De Dios" class="w-12 h-12 rounded-xl object-cover shadow-sm">
+        <span class="font-bold text-2xl text-slate-900 tracking-tight">Casa De Dios</span>
       </div>
 
       <!-- FORM LOGIN -->
@@ -156,10 +155,8 @@
     <div>
       <div class="flex items-center justify-between px-3 py-2 mb-6">
         <div class="flex items-center gap-3">
-          <div class="bg-blue-600 text-white p-2 rounded-xl flex items-center justify-center shadow-sm">
-            <i data-lucide="church" class="w-5 h-5"></i>
-          </div>
-          <span class="font-bold text-lg text-slate-900 tracking-tight">cdd<span class="text-blue-600">.app</span></span>
+          <img src="logo.jpg" alt="Casa De Dios" class="w-9 h-9 rounded-lg object-cover shadow-sm">
+          <span class="font-bold text-lg text-slate-900 tracking-tight">Casa De Dios</span>
         </div>
         <button onclick="cerrarSidebarMobile()" class="md:hidden p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
           <i data-lucide="x" class="w-5 h-5"></i>
@@ -238,7 +235,7 @@
       <button onclick="abrirSidebarMobile()" class="p-2 border border-slate-200 rounded-xl hover:bg-slate-100 text-slate-600 transition">
         <i data-lucide="menu" class="w-5 h-5"></i>
       </button>
-      <span class="font-bold text-slate-900">cdd<span class="text-blue-600">.app</span></span>
+      <span class="font-bold text-slate-900">Casa De Dios</span>
       <div class="w-9"></div>
     </div>
 
@@ -1870,6 +1867,32 @@
       return usuarios.filter(u => u.rol === 'Líder' && u.estado === 'aprobado');
     }
 
+    // Cuando se marca/desmarca a alguien como "líder a cargo" de un Grupo Pequeño o Ministerio,
+    // esto actualiza también su cuenta (liderGrupos / liderMinisterios) para que en Miembros y
+    // Asistencia le aparezca automáticamente ese grupo/ministerio en su alcance. Así, un líder que
+    // esté a cargo de una célula Y de un ministerio ve la unión de ambos en todas partes.
+    async function sincronizarLideresUsuarios(campo, nombreScope, nombresSeleccionados) {
+      if (!nombreScope) return;
+      const batch = db.batch();
+      let huboCambios = false;
+
+      getUsuariosLideresAprobados().forEach(u => {
+        const actuales = campo === 'liderGrupos' ? getGruposDeLider(u) : getMinisteriosDeLider(u);
+        const deberiaEstar = nombresSeleccionados.includes(u.nombre);
+        const estaActualmente = actuales.includes(nombreScope);
+
+        if (deberiaEstar && !estaActualmente) {
+          batch.update(db.collection('usuarios').doc(u.id), { [campo]: firebase.firestore.FieldValue.arrayUnion(nombreScope) });
+          huboCambios = true;
+        } else if (!deberiaEstar && estaActualmente) {
+          batch.update(db.collection('usuarios').doc(u.id), { [campo]: firebase.firestore.FieldValue.arrayRemove(nombreScope) });
+          huboCambios = true;
+        }
+      });
+
+      if (huboCambios) await batch.commit();
+    }
+
     /* MÓDULO MINISTERIOS CON EDITAR Y ELIMINAR EVENTOS + MIEMBROS INTEGRANTES */
     // Compatibilidad: ministerios viejos guardaban un solo líder como texto ("lider"); los nuevos guardan una lista ("lideres").
     function getLideresDeMinisterio(min) {
@@ -2012,18 +2035,33 @@
       const checkedBoxes = document.querySelectorAll('input[name="miembros-min-check"]:checked');
       const miembrosMinisterio = Array.from(checkedBoxes).map(cb => cb.value);
 
-      const guardado = ministerioEditandoId
-        ? db.collection('ministerios').doc(ministerioEditandoId).update({ nombre, lideres, miembros: miembrosMinisterio })
-        : db.collection('ministerios').add({ nombre, lideres, miembros: miembrosMinisterio, eventos: [] });
-
-      guardado.then(() => cerrarModalCrearMinisterio())
-        .catch(err => alert('No se pudo guardar: ' + err.message));
+      (async () => {
+        try {
+          if (ministerioEditandoId) {
+            await db.collection('ministerios').doc(ministerioEditandoId).update({ nombre, lideres, miembros: miembrosMinisterio });
+          } else {
+            await db.collection('ministerios').add({ nombre, lideres, miembros: miembrosMinisterio, eventos: [] });
+          }
+          await sincronizarLideresUsuarios('liderMinisterios', nombre, lideres);
+          cerrarModalCrearMinisterio();
+        } catch (err) {
+          alert('No se pudo guardar: ' + err.message);
+        }
+      })();
     }
 
     function eliminarMinisterio(id) {
-      if(confirm("¿Seguro que deseas eliminar este ministerio?")) {
-        db.collection('ministerios').doc(id).delete().catch(err => alert('No se pudo eliminar: ' + err.message));
-      }
+      if(!confirm("¿Seguro que deseas eliminar este ministerio?")) return;
+      const min = ministerios.find(m => m.id === id);
+
+      (async () => {
+        try {
+          if (min) await sincronizarLideresUsuarios('liderMinisterios', min.nombre, []);
+          await db.collection('ministerios').doc(id).delete();
+        } catch (err) {
+          alert('No se pudo eliminar: ' + err.message);
+        }
+      })();
     }
 
     function abrirModalEventoMinisterio(minId, evId = null) {
@@ -2174,17 +2212,23 @@
       grupoLideresEditando = null;
     }
 
-    function guardarLideresGrupo() {
+    async function guardarLideresGrupo() {
       if (!grupoLideresEditando) return;
       const lideres = Array.from(document.querySelectorAll('input[name="lideres-grupo-check"]:checked')).map(cb => cb.value);
 
-      db.collection('gruposInfo').doc(grupoLideresEditando).set({ lideres })
-        .then(() => cerrarModalLideresGrupo())
-        .catch(err => alert('No se pudo guardar: ' + err.message));
+      try {
+        await db.collection('gruposInfo').doc(grupoLideresEditando).set({ lideres });
+        await sincronizarLideresUsuarios('liderGrupos', grupoLideresEditando, lideres);
+        cerrarModalLideresGrupo();
+      } catch (err) {
+        alert('No se pudo guardar: ' + err.message);
+      }
     }
 
     async function eliminarGrupo(grupoAEliminar) {
       if(!confirm(`¿Deseas eliminar el grupo "${grupoAEliminar}"? Los miembros pasarán a "Sin grupo".`)) return;
+
+      await sincronizarLideresUsuarios('liderGrupos', grupoAEliminar, []).catch(() => {});
 
       try {
         const batch = db.batch();

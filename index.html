@@ -1864,6 +1864,12 @@
       lucide.createIcons();
     }
 
+    // Solo las cuentas aprobadas con rol "Líder" (las que aparecen en la sección Líderes)
+    // son válidas para figurar como líder de un Grupo Pequeño o Ministerio.
+    function getUsuariosLideresAprobados() {
+      return usuarios.filter(u => u.rol === 'Líder' && u.estado === 'aprobado');
+    }
+
     /* MÓDULO MINISTERIOS CON EDITAR Y ELIMINAR EVENTOS + MIEMBROS INTEGRANTES */
     // Compatibilidad: ministerios viejos guardaban un solo líder como texto ("lider"); los nuevos guardan una lista ("lideres").
     function getLideresDeMinisterio(min) {
@@ -1947,6 +1953,7 @@
 
       const contLideres = document.getElementById('contenedor-check-lideres-min');
       const lideresActuales = getLideresDeMinisterio(minExistente);
+      const lideresDisponibles = getUsuariosLideresAprobados();
 
       const contCheck = document.getElementById('contenedor-check-miembros-min');
       contCheck.innerHTML = '';
@@ -1957,21 +1964,21 @@
         document.getElementById('input-nombre-min').value = '';
       }
 
+      contLideres.innerHTML = lideresDisponibles.length === 0
+        ? `<p class="text-xs text-slate-400 italic">Todavía no hay ninguna cuenta con rol Líder aprobada. Aprobá una desde "Solicitudes pendientes" o la sección Líderes.</p>`
+        : lideresDisponibles.map(u => {
+            const isChecked = lideresActuales.includes(u.nombre) ? 'checked' : '';
+            return `
+              <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:bg-slate-100 p-1 rounded-lg transition">
+                <input type="checkbox" name="lideres-min-check" value="${u.nombre}" ${isChecked} class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+                <span>${u.nombre}</span>
+              </label>
+            `;
+          }).join('');
+
       if(miembros.length === 0) {
-        contLideres.innerHTML = `<p class="text-xs text-slate-400 italic">No hay miembros registrados en la plataforma.</p>`;
         contCheck.innerHTML = `<p class="text-xs text-slate-400 italic">No hay miembros registrados en la plataforma.</p>`;
       } else {
-        contLideres.innerHTML = miembros.map(m => {
-          const nombreComp = `${m.nombre} ${m.apellido}`;
-          const isChecked = lideresActuales.includes(nombreComp) ? 'checked' : '';
-          return `
-            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:bg-slate-100 p-1 rounded-lg transition">
-              <input type="checkbox" name="lideres-min-check" value="${nombreComp}" ${isChecked} class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
-              <span>${nombreComp}</span>
-            </label>
-          `;
-        }).join('');
-
         contCheck.innerHTML = miembros.map(m => {
           const nombreComp = `${m.nombre} ${m.apellido}`;
           const isChecked = minExistente && minExistente.miembros && minExistente.miembros.includes(nombreComp) ? 'checked' : '';
@@ -2145,16 +2152,16 @@
 
       const lideresActuales = (gruposInfo[nombreGrupo] && gruposInfo[nombreGrupo].lideres) || [];
       const cont = document.getElementById('contenedor-check-lideres-grupo');
+      const lideresDisponibles = getUsuariosLideresAprobados();
 
-      cont.innerHTML = miembros.length === 0
-        ? `<p class="text-xs text-slate-400 italic">No hay miembros registrados en la plataforma.</p>`
-        : miembros.map(m => {
-            const nombreComp = `${m.nombre} ${m.apellido}`;
-            const isChecked = lideresActuales.includes(nombreComp) ? 'checked' : '';
+      cont.innerHTML = lideresDisponibles.length === 0
+        ? `<p class="text-xs text-slate-400 italic">Todavía no hay ninguna cuenta con rol Líder aprobada. Aprobá una desde "Solicitudes pendientes" o la sección Líderes.</p>`
+        : lideresDisponibles.map(u => {
+            const isChecked = lideresActuales.includes(u.nombre) ? 'checked' : '';
             return `
               <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:bg-slate-100 p-1 rounded-lg transition">
-                <input type="checkbox" name="lideres-grupo-check" value="${nombreComp}" ${isChecked} class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
-                <span>${nombreComp}</span>
+                <input type="checkbox" name="lideres-grupo-check" value="${u.nombre}" ${isChecked} class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+                <span>${u.nombre}</span>
               </label>
             `;
           }).join('');
@@ -2731,22 +2738,26 @@
     }
 
     /* ---- Google Sign-In: Firebase ya verifica la identidad, no hace falta código de verificación ---- */
+    // Usamos "redirect" en vez de "popup": en varios celulares (Safari/Chrome) la ventana emergente
+    // de Google se queda trabada o el navegador la bloquea directamente. Con redirect, la página entera
+    // te lleva a Google y vuelve sola — funciona de forma mucho más confiable en cualquier dispositivo.
     async function iniciarSesionGoogle() {
       const provider = new firebase.auth.GoogleAuthProvider();
       try {
-        const result = await auth.signInWithPopup(provider);
-        const user = result.user;
-        const docRef = db.collection('usuarios').doc(user.uid);
-        const snap = await docRef.get();
-        if (!snap.exists) {
-          await crearDocUsuario(user.uid, user.displayName || user.email, user.email);
-        }
-        // onAuthStateChanged se encarga del resto (revisa estado/rol y entra a la app)
+        await auth.signInWithRedirect(provider);
       } catch (err) {
         const mensaje = textoErrorFirebase(err);
         if (mensaje) alert('No se pudo iniciar sesión con Google: ' + mensaje);
       }
     }
+
+    // Al volver de Google, si hubo un error (por ejemplo dominio no autorizado), lo mostramos.
+    // La creación del perfil y el ingreso a la app los maneja onAuthStateChanged, que ahora
+    // se "autorepara" si todavía no existe el documento en Firestore.
+    auth.getRedirectResult().catch(err => {
+      const mensaje = textoErrorFirebase(err);
+      if (mensaje) alert('No se pudo iniciar sesión con Google: ' + mensaje);
+    });
 
     function cerrarSesion() {
       auth.signOut();
@@ -2773,12 +2784,20 @@
       }
 
       try {
-        const docSnap = await db.collection('usuarios').doc(user.uid).get();
+        let docSnap = await db.collection('usuarios').doc(user.uid).get();
         if (!docSnap.exists) {
-          mostrarErrorAuth(document.getElementById('login-error'), 'No encontramos tu perfil. Contactá al administrador.');
-          mostrarVistaAuth('login');
-          auth.signOut();
-          return;
+          // Puede pasar justo después de registrarse con Google: la cuenta ya está creada en
+          // Firebase Auth pero el perfil en Firestore todavía se está escribiendo. Nos "autoreparamos"
+          // creándolo acá en vez de trabar el inicio de sesión.
+          try {
+            await crearDocUsuario(user.uid, user.displayName || user.email, user.email);
+            docSnap = await db.collection('usuarios').doc(user.uid).get();
+          } catch (errCreacion) {
+            mostrarErrorAuth(document.getElementById('login-error'), 'No encontramos tu perfil. Contactá al administrador.');
+            mostrarVistaAuth('login');
+            auth.signOut();
+            return;
+          }
         }
 
         const datos = { id: user.uid, ...docSnap.data() };
@@ -3220,13 +3239,24 @@
             <td class="py-3.5 px-4 font-bold text-slate-800">${u.nombre}</td>
             <td class="py-3.5 px-4 text-slate-500 text-xs">${u.email}</td>
             <td class="py-3.5 px-4"><div class="flex flex-wrap gap-1.5">${badges || '<span class="text-xs text-slate-400 italic">Sin grupos ni ministerios asignados</span>'}</div></td>
-            <td class="py-3.5 px-4">
+            <td class="py-3.5 px-4 flex items-center gap-2">
               <button onclick="abrirModalEditarLider('${u.email}')" class="bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 p-1.5 rounded-lg transition" title="Editar asignación"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+              <button onclick="eliminarLider('${u.email}')" class="text-slate-400 hover:text-red-600 p-1.5 transition" title="Eliminar líder"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </td>
           </tr>
         `;
       }).join('');
       lucide.createIcons();
+    }
+
+    function eliminarLider(email) {
+      const u = usuarios.find(x => x.email === email);
+      if (!u) return;
+      if (!confirm(`¿Seguro que deseas eliminar a ${u.nombre} como líder? Pierde el acceso a la plataforma y deja de aparecer en los grupos/ministerios que lideraba.`)) return;
+
+      db.collection('usuarios').doc(u.id).delete()
+        .then(() => alert(`${u.nombre} fue eliminado de Líderes.`))
+        .catch(err => alert('No se pudo eliminar: ' + err.message));
     }
 
     /* ============ CALENDARIO DE EVENTOS ESPECIALES (visible para todos, editable solo por Admin/Líder) ============ */

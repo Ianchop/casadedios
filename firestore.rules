@@ -52,6 +52,12 @@ service cloud.firestore {
       allow write: if isAdmin() || esLider();
     }
 
+    // Líderes a cargo de cada grupo pequeño (un documento por grupo). Gestión = solo admin.
+    match /gruposInfo/{nombreGrupo} {
+      allow read: if estaAprobado();
+      allow write: if isAdmin();
+    }
+
     // Miembros de la iglesia.
     match /miembros/{id} {
       allow read: if estaAprobado();
@@ -61,10 +67,13 @@ service cloud.firestore {
       allow update, delete: if isAdmin() || esLider();
     }
 
-    // Ministerios (con sus eventos internos anidados). Solo el admin los gestiona.
+    // Ministerios (con sus eventos internos anidados). Solo el admin los gestiona,
+    // salvo que un líder únicamente esté actualizando la lista de integrantes
+    // (eso pasa cuando se asigna un ministerio desde la ficha de un miembro).
     match /ministerios/{id} {
       allow read: if estaAprobado();
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (esLider() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['miembros']));
     }
 
     // Prospectos / seguimiento de consolidación.

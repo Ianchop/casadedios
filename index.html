@@ -318,6 +318,12 @@
 
     <!-- VISTA: LISTA DE MIEMBROS -->
     <div id="view-miembros" class="tab-content hidden space-y-6">
+      <!-- SOLO PARA LÍDERES CON 2 O MÁS GRUPOS/MINISTERIOS: elegir cuál administrar ahora -->
+      <div id="selector-scope-miembros-lider" class="hidden space-y-2">
+        <p class="text-xs font-semibold text-slate-500">Estás administrando:</p>
+        <div id="tarjetas-scope-miembros-lider" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
           <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="users" class="w-6 h-6"></i></div>
@@ -854,6 +860,27 @@
       </div>
     </div>
 
+    <!-- MODAL ELIMINAR MIEMBRO (para líderes: elegir entre borrar o liberar hacia el pastor) -->
+    <div id="modal-eliminar-miembro" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800">¿Qué querés hacer con <span id="nombre-miembro-eliminar"></span>?</h3>
+          <p class="text-xs text-slate-400 mt-1">Elegí una opción</p>
+        </div>
+        <div class="space-y-2">
+          <button onclick="confirmarEnviarAlPastor()" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition">
+            <p class="font-semibold text-slate-800 text-sm flex items-center gap-2"><i data-lucide="send" class="w-4 h-4 text-blue-600"></i> Enviar al Pastor</p>
+            <p class="text-xs text-slate-400 mt-1">No se borra. Queda sin grupo ni ministerio, fuera de tu alcance, para que el administrador lo revise.</p>
+          </button>
+          <button onclick="confirmarBorrarMiembroDefinitivo()" class="w-full text-left p-4 rounded-xl border border-red-100 hover:border-red-300 hover:bg-red-50/50 transition">
+            <p class="font-semibold text-red-600 text-sm flex items-center gap-2"><i data-lucide="trash-2" class="w-4 h-4"></i> Borrar Miembro</p>
+            <p class="text-xs text-slate-400 mt-1">Elimina su registro de la plataforma de forma permanente.</p>
+          </button>
+        </div>
+        <button onclick="cerrarModalEliminarMiembro()" class="w-full border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">Cancelar</button>
+      </div>
+    </div>
+
     <!-- MODAL LÍDERES DEL GRUPO PEQUEÑO -->
     <div id="modal-lideres-grupo" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5">
@@ -1190,6 +1217,8 @@
     let calendarioMesActual = new Date();
     let eventoEspecialEditandoId = null;
     let diaSeleccionadoCalendario = null; // se inicializa en "hoy" la primera vez que se abre el calendario
+    let liderScopeMiembrosSeleccionado = null; // qué grupo/ministerio está administrando un líder con más de uno
+    let miembroIdEnProceso = null; // para el modal "Borrar Miembro" / "Enviar al Pastor"
     let listenersFirestoreActivos = []; // para poder "desconectar" al cerrar sesión
     // Para no guardar la "foto" del día con datos a medio cargar: esperamos a que estas
     // colecciones hayan traído su primer resultado antes de calcular el historial diario.
@@ -1197,6 +1226,7 @@
 
     function guardarMemoria() {
       renderGruposDropdowns();
+      renderSelectorScopeMiembrosLider();
       renderTabla();
       renderTarjetasGrupos();
       renderMinisterios();
@@ -2457,16 +2487,18 @@
             </select>
           </td>
           <td class="py-3.5 px-4 text-slate-500 text-xs font-medium">
+            ${esLiderActivo() ? `<span class="text-slate-600">${m.grupo}</span>` : `
             <select onchange="cambiarGrupoMiembro('${idx}', this.value)" class="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
               <option value="Sin grupo" ${m.grupo === 'Sin grupo' ? 'selected' : ''}>Sin grupo</option>
               ${grupos.map(g => `<option value="${g}" ${m.grupo === g ? 'selected' : ''}>${g}</option>`).join('')}
-            </select>
+            </select>`}
           </td>
           <td class="py-3.5 px-4 text-slate-500 text-xs font-medium">
+            ${(() => { const actual = getMinisterioDeMiembro(m); return esLiderActivo() ? `<span class="text-slate-600">${actual}</span>` : `
             <select onchange="cambiarMinisterioMiembro('${idx}', this.value)" class="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
-              ${(() => { const actual = getMinisterioDeMiembro(m); return `<option value="Sin ministerio" ${actual === 'Sin ministerio' ? 'selected' : ''}>Sin ministerio</option>` +
-                ministerios.map(min => `<option value="${min.nombre}" ${actual === min.nombre ? 'selected' : ''}>${min.nombre}</option>`).join(''); })()}
-            </select>
+              <option value="Sin ministerio" ${actual === 'Sin ministerio' ? 'selected' : ''}>Sin ministerio</option>
+              ${ministerios.map(min => `<option value="${min.nombre}" ${actual === min.nombre ? 'selected' : ''}>${min.nombre}</option>`).join('')}
+            </select>`; })()}
           </td>
           <td class="py-3.5 px-4"><span class="bg-emerald-50 text-emerald-600 font-medium px-2.5 py-1 rounded-full text-xs">● Activo</span></td>
           <td class="py-3.5 px-4 text-slate-400 hover:text-red-600 cursor-pointer" onclick="eliminarMiembro('${idx}')" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></td>
@@ -2491,10 +2523,68 @@
         .catch(err => alert('No se pudo guardar: ' + err.message));
     }
 
+    function esLiderActivo() {
+      return !!usuarioActivo && usuarioActivo.rol === 'Líder';
+    }
+
+    // Los líderes no pueden borrar directo: eligen entre "Borrar Miembro" (definitivo)
+    // o "Enviar al Pastor" (queda sin grupo/ministerio, fuera de su alcance, sin borrarse).
+    // El admin conserva el borrado directo de siempre.
     function eliminarMiembro(id) {
       const m = miembros.find(x => x.id === id);
-      if (m && confirm(`¿Seguro que deseas eliminar a ${m.nombre}?`)) {
+      if (!m) return;
+      if (esLiderActivo()) {
+        miembroIdEnProceso = id;
+        document.getElementById('nombre-miembro-eliminar').textContent = `${m.nombre} ${m.apellido}`;
+        document.getElementById('modal-eliminar-miembro').classList.remove('hidden');
+        document.getElementById('modal-eliminar-miembro').classList.add('flex');
+        return;
+      }
+      if (confirm(`¿Seguro que deseas eliminar a ${m.nombre}?`)) {
         db.collection('miembros').doc(id).delete().catch(err => alert('No se pudo eliminar: ' + err.message));
+      }
+    }
+
+    function cerrarModalEliminarMiembro() {
+      miembroIdEnProceso = null;
+      document.getElementById('modal-eliminar-miembro').classList.add('hidden');
+      document.getElementById('modal-eliminar-miembro').classList.remove('flex');
+    }
+
+    function confirmarBorrarMiembroDefinitivo() {
+      const id = miembroIdEnProceso;
+      const m = miembros.find(x => x.id === id);
+      if (!m) return;
+      if (!confirm(`Esto borrará el registro de ${m.nombre} de forma permanente. ¿Continuar?`)) return;
+      db.collection('miembros').doc(id).delete()
+        .then(() => cerrarModalEliminarMiembro())
+        .catch(err => alert('No se pudo eliminar: ' + err.message));
+    }
+
+    // "Enviar al Pastor": libera al miembro solo de los scopes que el líder maneja
+    // (su/sus grupos y/o su/sus ministerios), sin tocar asignaciones ajenas.
+    async function confirmarEnviarAlPastor() {
+      const id = miembroIdEnProceso;
+      const m = miembros.find(x => x.id === id);
+      if (!m || !usuarioActivo) return;
+      try {
+        const batch = db.batch();
+        if (getGruposDeLider(usuarioActivo).includes(m.grupo)) {
+          batch.update(db.collection('miembros').doc(id), { grupo: 'Sin grupo' });
+        }
+        const nombreCompleto = `${m.nombre} ${m.apellido}`;
+        getMinisteriosDeLider(usuarioActivo).forEach(nombreMin => {
+          const min = ministerios.find(x => x.nombre === nombreMin);
+          if (min && (min.miembros || []).includes(nombreCompleto)) {
+            batch.update(db.collection('ministerios').doc(min.id), {
+              miembros: firebase.firestore.FieldValue.arrayRemove(nombreCompleto)
+            });
+          }
+        });
+        await batch.commit();
+        cerrarModalEliminarMiembro();
+      } catch (err) {
+        alert('No se pudo enviar al pastor: ' + err.message);
       }
     }
 
@@ -2925,9 +3015,47 @@
 
     function getMiembrosVisibles() {
       if (usuarioActivo && usuarioActivo.rol === 'Líder') {
+        const scopes = getScopesAsistenciaDisponibles();
+        if (scopes.length >= 2) {
+          if (!liderScopeMiembrosSeleccionado || !scopes.some(s => s.tipo === liderScopeMiembrosSeleccionado.tipo && s.nombre === liderScopeMiembrosSeleccionado.nombre)) {
+            liderScopeMiembrosSeleccionado = scopes[0];
+          }
+          return miembros.filter(m => getMiembrosDeScope(liderScopeMiembrosSeleccionado.tipo, liderScopeMiembrosSeleccionado.nombre).includes(m));
+        }
         return miembros.filter(estaEnScopeLider);
       }
       return miembros;
+    }
+
+    // Tarjetas para elegir qué grupo/ministerio administrar, cuando un líder tiene más de uno.
+    function renderSelectorScopeMiembrosLider() {
+      const cont = document.getElementById('selector-scope-miembros-lider');
+      const tarjetas = document.getElementById('tarjetas-scope-miembros-lider');
+      if (!cont || !tarjetas) return;
+
+      const scopes = esLiderActivo() ? getScopesAsistenciaDisponibles() : [];
+
+      if (!esLiderActivo() || scopes.length < 2) {
+        cont.classList.add('hidden');
+        return;
+      }
+
+      cont.classList.remove('hidden');
+      tarjetas.innerHTML = scopes.map(s => {
+        const activo = liderScopeMiembrosSeleccionado && liderScopeMiembrosSeleccionado.tipo === s.tipo && liderScopeMiembrosSeleccionado.nombre === s.nombre;
+        const nombreEscapado = s.nombre.replace(/'/g, "\\'");
+        return `
+          <button onclick="seleccionarScopeMiembrosLider('${s.tipo}', '${nombreEscapado}')" class="text-left p-4 rounded-2xl border transition ${activo ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white border-slate-200/80 text-slate-700 hover:border-blue-300'}">
+            <p class="text-[11px] font-semibold uppercase tracking-wide ${activo ? 'text-blue-100' : 'text-slate-400'}">${s.tipo === 'grupo' ? 'Grupo Pequeño' : 'Ministerio'}</p>
+            <p class="font-bold">${s.tipo === 'grupo' ? '🏠' : '🤝'} ${s.nombre}</p>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function seleccionarScopeMiembrosLider(tipo, nombre) {
+      liderScopeMiembrosSeleccionado = { tipo, nombre };
+      guardarMemoria();
     }
 
     /* ============ MÓDULO ASISTENCIA (SEMANAL, POR GRUPO O MINISTERIO) ============ */

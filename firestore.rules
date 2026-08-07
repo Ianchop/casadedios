@@ -71,7 +71,16 @@ service cloud.firestore {
       allow create: if isAdmin()
         || (esLider() && (request.resource.data.grupo == 'Sin grupo' || request.resource.data.grupo in miPerfil().liderGrupos))
         || miPerfil().rol == 'Consolidador';
-      allow update, delete: if isAdmin() || esLider();
+      // Un líder puede editar (bautizado, etc.) y borrar miembros de su propio alcance,
+      // pero NO puede reasignar el "grupo" de un miembro a otro grupo cualquiera:
+      // solo puede liberarlo a "Sin grupo" (acción "Enviar al Pastor").
+      allow update: if isAdmin() || (
+        esLider() && (
+          resource.data.grupo == request.resource.data.grupo ||
+          request.resource.data.grupo == 'Sin grupo'
+        )
+      );
+      allow delete: if isAdmin() || esLider();
     }
 
     // Ministerios (con sus eventos internos anidados). Solo el admin los gestiona,

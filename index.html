@@ -1,0 +1,3445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cdd.app - Plataforma Integral de Gestión Eclesial</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- EMAILJS SDK -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <!-- GOOGLE IDENTITY SERVICES (Iniciar sesión con Google) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .tab-content { animation: fadeIn 0.2s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="bg-slate-50 font-sans h-screen overflow-hidden text-slate-800">
+
+  <!-- PANTALLA DE AUTENTICACIÓN (LOGIN / REGISTRO / RECUPERAR) -->
+  <div id="auth-screen" class="h-screen w-full flex items-center justify-center bg-slate-100 p-4">
+    <div class="w-full max-w-md">
+      <div class="flex items-center justify-center gap-3 mb-6">
+        <div class="bg-blue-600 text-white p-2.5 rounded-xl flex items-center justify-center shadow-sm">
+          <i data-lucide="church" class="w-6 h-6"></i>
+        </div>
+        <span class="font-bold text-2xl text-slate-900 tracking-tight">cdd<span class="text-blue-600">.app</span></span>
+      </div>
+
+      <!-- FORM LOGIN -->
+      <div id="auth-view-login" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-8 space-y-5">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Iniciar sesión</h2>
+          <p class="text-xs text-slate-400 mt-1">Ingresa a la plataforma de tu iglesia</p>
+        </div>
+        <p id="login-error" class="hidden text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2"></p>
+        <div id="google-signin-login" class="flex justify-center"></div>
+        <div class="flex items-center gap-3 text-[11px] text-slate-400">
+          <div class="flex-1 border-t border-slate-100"></div> o con tu correo <div class="flex-1 border-t border-slate-100"></div>
+        </div>
+        <form onsubmit="iniciarSesion(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Correo electrónico</label>
+            <input type="email" id="login-email" required placeholder="tucorreo@email.com" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña</label>
+            <input type="password" id="login-password" required placeholder="••••••••" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+          </div>
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition">Ingresar</button>
+        </form>
+        <div class="flex justify-between text-xs pt-1">
+          <button onclick="mostrarVistaAuth('olvide')" class="text-blue-600 font-semibold hover:underline">¿Olvidaste tu contraseña?</button>
+          <button onclick="mostrarVistaAuth('registro')" class="text-slate-500 font-semibold hover:underline">Crear cuenta</button>
+        </div>
+      </div>
+
+      <!-- FORM REGISTRO -->
+      <div id="auth-view-registro" class="hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm p-8 space-y-5">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Crear cuenta</h2>
+          <p class="text-xs text-slate-400 mt-1">Verificamos tu correo y después el administrador aprueba tu acceso</p>
+        </div>
+        <p id="registro-error" class="hidden text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2"></p>
+        <div id="google-signin-registro" class="flex justify-center"></div>
+        <div class="flex items-center gap-3 text-[11px] text-slate-400">
+          <div class="flex-1 border-t border-slate-100"></div> o con tu correo <div class="flex-1 border-t border-slate-100"></div>
+        </div>
+        <form onsubmit="iniciarVerificacionCorreo(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre completo</label>
+            <input type="text" id="registro-nombre" required placeholder="Ej: Juan Pérez" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Correo electrónico</label>
+            <input type="email" id="registro-email" required placeholder="tucorreo@gmail.com" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña</label>
+            <input type="password" id="registro-password" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+          </div>
+          <button type="submit" id="btn-enviar-verificacion" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition">Enviar código de verificación</button>
+        </form>
+        <div class="text-center text-xs pt-1">
+          <button onclick="mostrarVistaAuth('login')" class="text-slate-500 font-semibold hover:underline">Ya tengo una cuenta</button>
+        </div>
+      </div>
+
+      <!-- FORM VERIFICAR CÓDIGO DE CORREO -->
+      <div id="auth-view-verificar" class="hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm p-8 space-y-5">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Verificá tu correo</h2>
+          <p class="text-xs text-slate-400 mt-1" id="verificar-subtitulo">Te enviamos un código de 6 dígitos</p>
+        </div>
+        <p id="verificar-error" class="hidden text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2"></p>
+        <form onsubmit="confirmarCodigoVerificacion(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Código de verificación</label>
+            <input type="text" id="verificar-codigo" required maxlength="6" inputmode="numeric" placeholder="000000" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-center text-lg tracking-[0.5em] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+          </div>
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition">Verificar y enviar solicitud</button>
+        </form>
+        <div class="flex justify-between text-xs pt-1">
+          <button onclick="reenviarCodigoVerificacion()" class="text-blue-600 font-semibold hover:underline">Reenviar código</button>
+          <button onclick="mostrarVistaAuth('registro')" class="text-slate-500 font-semibold hover:underline">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- FORM OLVIDÉ CONTRASEÑA -->
+      <div id="auth-view-olvide" class="hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm p-8 space-y-5">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Recuperar contraseña</h2>
+          <p class="text-xs text-slate-400 mt-1">Te enviaremos una contraseña temporal por correo</p>
+        </div>
+        <p id="olvide-error" class="hidden text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2"></p>
+        <p id="olvide-exito" class="hidden text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2"></p>
+        <form onsubmit="enviarRecuperacion(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Correo electrónico</label>
+            <input type="email" id="olvide-email" required placeholder="tucorreo@email.com" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+          </div>
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition">Enviar contraseña temporal</button>
+        </form>
+        <div class="text-center text-xs pt-1">
+          <button onclick="mostrarVistaAuth('login')" class="text-slate-500 font-semibold hover:underline">Volver a iniciar sesión</button>
+        </div>
+      </div>
+
+      <!-- AVISO SOLICITUD PENDIENTE -->
+      <div id="auth-view-pendiente" class="hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm p-8 space-y-4 text-center">
+        <div class="w-14 h-14 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+          <i data-lucide="clock" class="w-7 h-7"></i>
+        </div>
+        <h2 class="text-lg font-bold text-slate-900">Solicitud enviada</h2>
+        <p class="text-sm text-slate-500">Tu cuenta fue registrada y está pendiente de aprobación por el administrador. Te avisaremos por correo cuando sea aprobada.</p>
+        <button onclick="mostrarVistaAuth('login')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition">Volver a iniciar sesión</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APLICACIÓN PRINCIPAL (VISIBLE SOLO CON SESIÓN INICIADA) -->
+  <div id="app-screen" class="hidden h-screen w-full flex overflow-hidden">
+
+  <!-- FONDO OSCURO PARA CERRAR EL MENÚ EN CELULAR -->
+  <div id="sidebar-backdrop" onclick="cerrarSidebarMobile()" class="hidden fixed inset-0 bg-slate-900/40 z-40 md:hidden"></div>
+
+  <!-- BARRA LATERAL (SIDEBAR) -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] -translate-x-full transition-transform duration-300 ease-in-out bg-white border-r border-slate-200 flex flex-col justify-between p-4 md:static md:z-auto md:w-64 md:max-w-none md:translate-x-0 md:transition-none flex-shrink-0">
+    <div>
+      <div class="flex items-center justify-between px-3 py-2 mb-6">
+        <div class="flex items-center gap-3">
+          <div class="bg-blue-600 text-white p-2 rounded-xl flex items-center justify-center shadow-sm">
+            <i data-lucide="church" class="w-5 h-5"></i>
+          </div>
+          <span class="font-bold text-lg text-slate-900 tracking-tight">cdd<span class="text-blue-600">.app</span></span>
+        </div>
+        <button onclick="cerrarSidebarMobile()" class="md:hidden p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <nav class="space-y-1 custom-scrollbar max-h-[calc(100vh-220px)] overflow-y-auto pr-1" id="main-nav">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-blue-600 text-white font-medium text-sm transition">
+          <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Panel de Control
+        </button>
+        <button onclick="switchTab('miembros')" id="nav-miembros" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+          <i data-lucide="users" class="w-5 h-5"></i> Miembros
+        </button>
+        <button onclick="switchTab('lideres')" id="nav-lideres" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+          <i data-lucide="user-cog" class="w-5 h-5"></i> Líderes
+        </button>
+        <button onclick="switchTab('asistencia')" id="nav-asistencia" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+          <i data-lucide="calendar-check" class="w-5 h-5"></i> Asistencia
+        </button>
+        <button onclick="switchTab('consolidacion')" id="nav-consolidacion" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+          <i data-lucide="heart" class="w-5 h-5"></i> Consolidación
+        </button>
+        <button onclick="switchTab('grupos')" id="nav-grupos" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+          <i data-lucide="users-round" class="w-5 h-5"></i> Grupos Pequeños
+        </button>
+        <button onclick="switchTab('ministerios')" id="nav-ministerios" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+          <i data-lucide="hand-heart" class="w-5 h-5"></i> Ministerios
+        </button>
+        <button onclick="switchTab('comunicaciones')" id="nav-comunicaciones" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+          <i data-lucide="message-square" class="w-5 h-5"></i> Comunicación
+        </button>
+        <button onclick="switchTab('eventos')" id="nav-eventos" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+          <i data-lucide="calendar" class="w-5 h-5"></i> Eventos
+        </button>
+        <button onclick="switchTab('cursos')" id="nav-cursos" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+          <i data-lucide="graduation-cap" class="w-5 h-5"></i> Escuela Bíblica
+        </button>
+        <button onclick="switchTab('appmovil')" id="nav-appmovil" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+          <i data-lucide="smartphone" class="w-5 h-5"></i> App Móvil
+        </button>
+        <button onclick="switchTab('configuracion')" id="nav-configuracion" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+          <i data-lucide="shield-check" class="w-5 h-5"></i> Seguridad & Permisos
+        </button>
+      </nav>
+    </div>
+
+    <div class="space-y-3 pt-2">
+      <div class="bg-slate-100 p-3 rounded-xl flex items-center gap-3">
+        <div class="p-2 bg-blue-100 text-blue-600 rounded-lg">
+          <i data-lucide="building-2" class="w-5 h-5"></i>
+        </div>
+        <div class="overflow-hidden">
+          <p class="text-xs text-slate-400 font-medium">Mi iglesia</p>
+          <p class="text-sm font-bold text-slate-800 truncate">Casa de Dios</p>
+        </div>
+      </div>
+
+      <div class="border-t border-slate-200 pt-3 flex items-center justify-between">
+        <div class="flex items-center gap-3 overflow-hidden">
+          <div id="user-avatar-badge" class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+            PS
+          </div>
+          <div class="overflow-hidden">
+            <p id="user-name-display" class="text-xs font-semibold text-slate-800 truncate">Psocikian</p>
+            <p id="user-role-display" class="text-[10px] text-slate-400 truncate">Súper Administrador</p>
+          </div>
+        </div>
+        <button onclick="cerrarSesion()" title="Cerrar sesión" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition flex-shrink-0">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ÁREA DE CONTENIDO PRINCIPAL -->
+  <main class="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative w-full min-w-0">
+    <!-- BARRA SUPERIOR SOLO EN CELULAR: BOTÓN PARA ABRIR EL MENÚ -->
+    <div class="flex items-center justify-between mb-4 md:hidden">
+      <button onclick="abrirSidebarMobile()" class="p-2 border border-slate-200 rounded-xl hover:bg-slate-100 text-slate-600 transition">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
+      <span class="font-bold text-slate-900">cdd<span class="text-blue-600">.app</span></span>
+      <div class="w-9"></div>
+    </div>
+
+    <div class="flex flex-wrap gap-3 justify-between items-center mb-6">
+      <div>
+        <h1 id="page-title" class="text-xl md:text-2xl font-bold text-slate-900">Panel de Control</h1>
+        <p id="page-subtitle" class="text-slate-500 text-sm">Resumen general de tu iglesia</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button onclick="abrirModalSolicitudes()" id="btn-solicitudes-host" class="hidden relative bg-amber-50 text-amber-700 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-amber-200 hover:bg-amber-100 transition">
+          <i data-lucide="clock" class="w-4 h-4"></i> Solicitudes pendientes: <span id="cnt-solicitudes">0</span>
+        </button>
+        <span class="bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-blue-100">
+          <i data-lucide="rocket" class="w-4 h-4"></i> Módulos: 8/8 Activos
+        </span>
+      </div>
+    </div>
+
+    <!-- VISTA 1: DASHBOARD GENERAL -->
+    <div id="view-dashboard" class="tab-content space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div onclick="abrirModalEstadisticaAnual('miembros')" class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex justify-between items-start cursor-pointer hover:shadow-md hover:border-blue-200 transition">
+          <div>
+            <p class="text-xs font-medium text-slate-400 mb-2">Miembros Activos</p>
+            <h2 id="dash-miembros-cnt" class="text-3xl font-bold text-slate-800">0</h2>
+            <p class="text-[11px] text-slate-400 mt-2">Registrados en la plataforma</p>
+          </div>
+          <div class="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="users" class="w-5 h-5"></i></div>
+        </div>
+        <div onclick="abrirModalEstadisticaAnual('visitantes')" class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex justify-between items-start cursor-pointer hover:shadow-md hover:border-blue-200 transition">
+          <div>
+            <p class="text-xs font-medium text-slate-400 mb-2">Nuevos Visitantes</p>
+            <h2 id="dash-visitantes-cnt" class="text-3xl font-bold text-slate-800">0</h2>
+            <p class="text-[11px] text-slate-400 mt-2">Prospectos en Consolidación</p>
+          </div>
+          <div class="p-2.5 bg-slate-100 text-slate-500 rounded-xl"><i data-lucide="user-plus" class="w-5 h-5"></i></div>
+        </div>
+        <div onclick="abrirModalEstadisticaAnual('consolidacion')" class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex justify-between items-start cursor-pointer hover:shadow-md hover:border-blue-200 transition">
+          <div>
+            <p class="text-xs font-medium text-slate-400 mb-2">Consolidación</p>
+            <h2 id="dash-consolidacion-pct" class="text-3xl font-bold text-slate-800">0%</h2>
+            <span id="badge-consolidacion-status" class="text-[11px] font-semibold px-2 py-0.5 rounded-full inline-block mt-2">● En progreso</span>
+          </div>
+          <div class="p-2.5 bg-slate-100 text-slate-500 rounded-xl"><i data-lucide="user-check" class="w-5 h-5"></i></div>
+        </div>
+        <div onclick="abrirModalEstadisticaAnual('asistencia')" class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex justify-between items-start cursor-pointer hover:shadow-md hover:border-blue-200 transition">
+          <div>
+            <p class="text-xs font-medium text-slate-400 mb-2">% Asistencia Células</p>
+            <h2 id="dash-asistencia-grupos-pct" class="text-3xl font-bold text-slate-800">0%</h2>
+            <span id="badge-grupos-status" class="text-[11px] font-semibold px-2 py-0.5 rounded-full inline-block mt-2">● En progreso</span>
+          </div>
+          <div class="p-2.5 bg-slate-100 text-slate-500 rounded-xl"><i data-lucide="trending-up" class="w-5 h-5"></i></div>
+        </div>
+        <div onclick="abrirModalEstadisticaAnual('proyeccion')" class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex justify-between items-start cursor-pointer hover:shadow-md hover:border-blue-200 transition">
+          <div>
+            <p class="text-xs font-medium text-slate-400 mb-2">Proyección Próxima Semana</p>
+            <h2 id="dash-proyeccion-prospectos" class="text-3xl font-bold text-slate-800">0</h2>
+            <p class="text-[11px] text-slate-400 mt-2">Nuevos prospectos esperados</p>
+          </div>
+          <div class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl"><i data-lucide="sparkles" class="w-5 h-5"></i></div>
+        </div>
+      </div>
+      <p class="text-[11px] text-slate-400 -mt-2">💡 Hacé clic en cualquier tarjeta para ver su evolución durante todo el año.</p>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex justify-between items-center mb-4">
+            <div><h3 class="font-bold text-slate-800">Miembros Activos</h3><p class="text-xs text-slate-400">Progreso registrado</p></div>
+          </div>
+          <div class="h-52"><canvas id="chartMiembros"></canvas></div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex justify-between items-center mb-4">
+            <div><h3 class="font-bold text-slate-800">Servicio Dominical</h3><p class="text-xs text-slate-400">Asistencia proyectada</p></div>
+          </div>
+          <div class="h-52"><canvas id="chartAsistencia"></canvas></div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex justify-between items-center mb-4">
+            <div><h3 class="font-bold text-slate-800">Nuevos Prospectos</h3><p class="text-xs text-slate-400">Ingresos semanales</p></div>
+          </div>
+          <div class="h-52"><canvas id="chartProspectos"></canvas></div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex justify-between items-center mb-4">
+            <div><h3 class="font-bold text-slate-800">Proyección Próxima Semana</h3><p class="text-xs text-slate-400">Real vs. estimado</p></div>
+          </div>
+          <div class="h-52"><canvas id="chartProyeccion"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISTA: LISTA DE MIEMBROS -->
+    <div id="view-miembros" class="tab-content hidden space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+          <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="users" class="w-6 h-6"></i></div>
+          <div><p class="text-xs text-slate-400">Miembros Activos</p><h3 id="stat-miembros-activos" class="text-2xl font-bold text-slate-800">0</h3></div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+          <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i data-lucide="users-round" class="w-6 h-6"></i></div>
+          <div><p class="text-xs text-slate-400">Grupos Activos</p><h3 id="stat-grupos-activos" class="text-2xl font-bold text-slate-800">0</h3></div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+          <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i data-lucide="droplet" class="w-6 h-6"></i></div>
+          <div><p class="text-xs text-slate-400">Miembros Bautizados</p><h3 id="stat-miembros-bautizados" class="text-2xl font-bold text-slate-800">0</h3></div>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+          <div class="flex gap-2 flex-1 max-w-2xl">
+            <input type="text" id="input-buscar-miembro" onkeyup="filtrarMiembros()" placeholder="Buscar por nombre, teléfono o email..." class="border border-slate-200 rounded-xl px-4 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <select id="select-filtro-edad" onchange="filtrarMiembros()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <option value="">Todas las edades</option>
+              <option value="Niños">Niños</option>
+              <option value="Pre-Ados">Pre-Ados</option>
+              <option value="Adolescentes">Adolescentes</option>
+              <option value="Jóvenes">Jóvenes</option>
+              <option value="Jóvenes +">Jóvenes +</option>
+              <option value="Adultos">Adultos</option>
+              <option value="Ancianos">Ancianos</option>
+            </select>
+            <select id="select-filtro-grupo" onchange="filtrarMiembros()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <option value="">Todos los grupos</option>
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="mostrarModalCrearGrupo()" class="border border-blue-200 text-blue-600 hover:bg-blue-50 text-sm font-semibold px-3.5 py-2 rounded-xl flex items-center gap-2 transition">
+              <i data-lucide="folder-plus" class="w-4 h-4"></i> Crear Grupo
+            </button>
+            <button onclick="mostrarFormularioNuevo()" class="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-blue-700 transition">
+              <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Miembro
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b border-slate-100 text-slate-400">
+                <th class="py-3 px-4 font-medium">Nombre Completo</th>
+                <th class="py-3 px-4 font-medium">Categoría Edad</th>
+                <th class="py-3 px-4 font-medium">Barrio</th>
+                <th class="py-3 px-4 font-medium">F. Ingreso</th>
+                <th class="py-3 px-4 font-medium">Bautizado</th>
+                <th class="py-3 px-4 font-medium">Grupo / Célula</th>
+                <th class="py-3 px-4 font-medium">Estado</th>
+                <th class="py-3 px-4 font-medium">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-miembros-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISTA: LÍDERES -->
+    <div id="view-lideres" class="tab-content hidden space-y-6">
+      <div>
+        <h2 class="text-xl font-bold text-slate-800">Líderes</h2>
+        <p class="text-xs text-slate-400">Cuentas aprobadas con rol de Líder y los grupos/ministerios que tienen a cargo</p>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b border-slate-100 text-slate-400">
+                <th class="py-3 px-4 font-medium">Nombre</th>
+                <th class="py-3 px-4 font-medium">Correo</th>
+                <th class="py-3 px-4 font-medium">Grupos y Ministerios a cargo</th>
+                <th class="py-3 px-4 font-medium">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-lideres-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISTA: ASISTENCIA -->
+    <div id="view-asistencia" class="tab-content hidden space-y-6">
+      <div class="flex flex-wrap justify-between items-center gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Tomar Asistencia</h2>
+          <p class="text-xs text-slate-400">Registra quiénes asistieron a la reunión</p>
+        </div>
+        <div id="contenedor-selector-scope-asistencia" class="flex items-center gap-2"></div>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha de la reunión</label>
+            <input type="date" id="input-asistencia-fecha" onchange="cargarAsistenciaDeFecha()" class="border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700">
+          </div>
+          <p id="asistencia-scope-info" class="text-xs text-slate-400"></p>
+        </div>
+
+        <div id="contenedor-check-asistencia" class="space-y-2 max-h-96 overflow-y-auto custom-scrollbar pr-1"></div>
+
+        <div class="flex justify-end pt-3 border-t border-slate-100">
+          <button onclick="guardarAsistencia()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-xl text-sm shadow-sm transition flex items-center gap-2">
+            <i data-lucide="check-check" class="w-4 h-4"></i> Guardar Asistencia
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+        <h3 class="font-bold text-slate-800">Historial de Reuniones</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b border-slate-100 text-slate-400">
+                <th class="py-3 px-4 font-medium">Fecha</th>
+                <th class="py-3 px-4 font-medium">Asistieron</th>
+                <th class="py-3 px-4 font-medium">% Asistencia</th>
+                <th class="py-3 px-4 font-medium">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-historial-asistencia-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISTA: FORMULARIO "NUEVO MIEMBRO" -->
+    <div id="view-nuevo-miembro" class="tab-content hidden space-y-6">
+      <div class="flex items-center gap-4 mb-2">
+        <button onclick="ocultarFormularioNuevo()" class="p-2 border border-slate-200 rounded-xl hover:bg-slate-100 text-slate-600 transition">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        </button>
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Nuevo Miembro</h2>
+          <p class="text-xs text-slate-400">Agrega un nuevo miembro a tu iglesia</p>
+        </div>
+      </div>
+
+      <div class="bg-white p-8 rounded-2xl border border-slate-200/80 shadow-sm max-w-4xl space-y-8">
+        <div>
+          <p class="text-xs font-bold text-slate-400 tracking-wider uppercase mb-3">Foto de Perfil</p>
+          <div class="flex items-center gap-5">
+            <div id="avatar-preview" class="w-20 h-20 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 overflow-hidden">
+              <i data-lucide="user" class="w-10 h-10"></i>
+            </div>
+            <div>
+              <label class="cursor-pointer bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-xl text-sm shadow-sm hover:bg-slate-50 flex items-center gap-2 inline-flex">
+                <i data-lucide="upload" class="w-4 h-4"></i> Subir foto
+                <input type="file" id="input-foto" accept="image/*" class="hidden" onchange="previewImage(event)">
+              </label>
+              <p class="text-[11px] text-slate-400 mt-2">JPG, PNG o GIF. Máximo 5MB.</p>
+            </div>
+          </div>
+        </div>
+
+        <form id="form-nuevo-miembro" onsubmit="guardarNuevoMiembro(event)" class="space-y-8">
+          <div class="space-y-4">
+            <p class="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-slate-100 pb-2">Información Personal</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre *</label>
+                <input type="text" id="input-nombre" required placeholder="Ej: Juan Carlos" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Apellido *</label>
+                <input type="text" id="input-apellido" required placeholder="Ej: Pérez García" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Sexo *</label>
+                <select id="input-sexo" required class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50 text-slate-700">
+                  <option value="">Seleccionar</option>
+                  <option value="Masculino">Masculino</option>
+                  <option value="Femenino">Femenino</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha de nacimiento</label>
+                <input type="date" id="input-nacimiento" onchange="calcularEdad()" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50 text-slate-700">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Categoría Edad</label>
+                <input type="text" id="input-categoria-edad" readonly placeholder="Se asigna según fecha" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm bg-slate-100 text-slate-600 font-semibold cursor-not-allowed">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Barrio</label>
+                <input type="text" id="input-barrio" placeholder="Ej: Centro" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <p class="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-slate-100 pb-2">Información de Contacto</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Teléfono</label>
+                <input type="tel" id="input-telefono" placeholder="Ej: +54 2983 345988" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                <input type="email" id="input-email" placeholder="Ej: juan@email.com" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Dirección</label>
+              <div class="relative">
+                <i data-lucide="map-pin" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                <input type="text" id="input-direccion" placeholder="Escribe y selecciona una dirección de Google Maps" class="w-full border border-slate-200 rounded-xl pl-10 pr-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <p class="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-slate-100 pb-2">Información de Iglesia</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha de Ingreso</label>
+                <input type="date" id="input-ingreso" value="2026-08-05" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50 text-slate-700">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">¿Bautizado?</label>
+                <select id="input-bautizado" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50 text-slate-700">
+                  <option value="No">No</option>
+                  <option value="Sí">Sí</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Grupo / Célula</label>
+                <select id="input-grupo-form" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50 text-slate-700">
+                  <option value="Sin grupo">Sin grupo</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <button type="button" onclick="ocultarFormularioNuevo()" class="border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold px-5 py-2.5 rounded-xl text-sm transition">Cancelar</button>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-xl text-sm shadow-sm transition flex items-center gap-2">
+              <i data-lucide="check" class="w-4 h-4"></i> Guardar Miembro
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- VISTA: GESTIÓN DE GRUPOS PEQUEÑOS -->
+    <div id="view-grupos" class="tab-content hidden space-y-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Grupos Pequeños y Células</h2>
+          <p class="text-xs text-slate-400">Administra todos los grupos creados en la iglesia</p>
+        </div>
+        <button onclick="mostrarModalCrearGrupo()" class="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-blue-700 transition">
+          <i data-lucide="plus" class="w-4 h-4"></i> Crear Grupo
+        </button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="lista-grupos-cards"></div>
+    </div>
+
+    <!-- VISTA: MINISTERIOS -->
+    <div id="view-ministerios" class="tab-content hidden space-y-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Ministerios</h2>
+          <p class="text-xs text-slate-400">Gestiona los equipos de trabajo, líderes, eventos y servidores</p>
+        </div>
+        <button onclick="abrirModalCrearMinisterio()" class="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-blue-700 transition shadow-sm">
+          <i data-lucide="plus" class="w-4 h-4"></i> Crear Ministerio
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="contenedor-ministerios-cards"></div>
+    </div>
+
+    <!-- VISTA: CONSOLIDACIÓN -->
+    <div id="view-consolidacion" class="tab-content hidden space-y-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Consolidación</h2>
+          <p class="text-xs text-slate-400">Seguimiento de nuevos visitantes por etapas y nivel de integración</p>
+        </div>
+        <button onclick="abrirModalNuevoProspecto()" class="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-blue-700 transition shadow-sm">
+          <i data-lucide="user-plus" class="w-4 h-4"></i> Registrar Prospecto
+        </button>
+      </div>
+
+      <!-- TARJETAS DE MÉTRICAS RÁPIDAS -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
+          <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="users" class="w-5 h-5"></i></div>
+          <div><p class="text-xs text-slate-400">Total Prospectos</p><h3 id="stat-prospectos-total" class="text-xl font-bold text-slate-800">0</h3></div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
+          <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i data-lucide="message-square" class="w-5 h-5"></i></div>
+          <div><p class="text-xs text-slate-400">Respondieron Mensaje</p><h3 id="stat-prospectos-respondió" class="text-xl font-bold text-slate-800">0</h3></div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
+          <div class="p-3 bg-purple-50 text-purple-600 rounded-xl"><i data-lucide="rotate-cw" class="w-5 h-5"></i></div>
+          <div><p class="text-xs text-slate-400">Volvieron 2+ Veces</p><h3 id="stat-prospectos-volvieron" class="text-xl font-bold text-slate-800">0</h3></div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
+          <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i data-lucide="home" class="w-5 h-5"></i></div>
+          <div><p class="text-xs text-slate-400">En Célula / Células</p><h3 id="stat-prospectos-celula" class="text-xl font-bold text-slate-800">0</h3></div>
+        </div>
+      </div>
+
+      <!-- TABLA DE SEGUIMIENTO -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+        <div class="flex justify-between items-center gap-4">
+          <input type="text" id="input-buscar-prospecto" onkeyup="renderConsolidacion()" placeholder="Buscar prospecto por nombre o teléfono..." class="border border-slate-200 rounded-xl px-4 py-2 text-sm w-full max-w-md focus:outline-none focus:ring-2 focus:ring-blue-600">
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b border-slate-100 text-slate-400">
+                <th class="py-3 px-4 font-medium">Nombre Completo</th>
+                <th class="py-3 px-4 font-medium">Teléfono</th>
+                <th class="py-3 px-4 font-medium">Etapa</th>
+                <th class="py-3 px-4 font-medium">¿Respondió Msj?</th>
+                <th class="py-3 px-4 font-medium">Visitas Posteriores</th>
+                <th class="py-3 px-4 font-medium">Integrado a Célula</th>
+                <th class="py-3 px-4 font-medium">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-consolidacion-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL REGISTRAR PROSPECTO -->
+    <div id="modal-nuevo-prospecto" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h3 class="text-lg font-bold text-slate-800">Nuevo Prospecto de Visita</h3>
+          <button onclick="cerrarModalNuevoProspecto()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <form onsubmit="guardarNuevoProspecto(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre y Apellido *</label>
+            <input type="text" id="input-prospecto-nombre" required placeholder="Ej: Martin Luther" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Teléfono / WhatsApp *</label>
+            <input type="tel" id="input-prospecto-telefono" required placeholder="Ej: +54 2983 345988" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha de Primera Visita</label>
+            <input type="date" id="input-prospecto-fecha" value="2026-08-05" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700">
+          </div>
+          <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <button type="button" onclick="cerrarModalNuevoProspecto()" class="border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">Cancelar</button>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-semibold">Guardar Prospecto</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL EDITAR SEGUIMIENTO CONSOLIDACIÓN -->
+    <div id="modal-editar-seguimiento" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">Actualizar Seguimiento</h3>
+            <p class="text-xs text-slate-400" id="subtitulo-modal-seguimiento">Prospecto</p>
+          </div>
+          <button onclick="cerrarModalSeguimiento()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <form onsubmit="guardarSeguimiento(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Etapa actual</label>
+            <select id="edit-prospecto-etapa" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700">
+              <option value="Nuevos">Nuevos</option>
+              <option value="En Seguimiento">En Seguimiento</option>
+              <option value="Consolidados">Consolidados (Se agregará a Miembros)</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">¿Respondió a los mensajes?</label>
+            <select id="edit-prospecto-respondio" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700">
+              <option value="Pendiente">Sin contactar aún</option>
+              <option value="Sí">Sí respondió</option>
+              <option value="No">No respondió</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Veces que volvió a venir tras la 1ª visita</label>
+            <select id="edit-prospecto-visitas" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700">
+              <option value="0">Ninguna vez más</option>
+              <option value="1">1 vez más</option>
+              <option value="2">2 veces más</option>
+              <option value="3+">3 o más veces</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">¿Se integró a una Célula / Grupo Pequeño?</label>
+            <select id="edit-prospecto-celula" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700">
+              <option value="No">No se ha integrado</option>
+              <option value="Sí">Sí, ya asiste a una célula</option>
+            </select>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <button type="button" onclick="cerrarModalSeguimiento()" class="border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">Cancelar</button>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-semibold">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL VER QUIÉNES FALTARON A UNA REUNIÓN -->
+    <div id="modal-ausentes-asistencia" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">Quiénes faltaron</h3>
+            <p class="text-xs text-slate-400" id="subtitulo-modal-ausentes">Reunión</p>
+          </div>
+          <button onclick="cerrarModalAusentes()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div id="lista-ausentes-asistencia" class="space-y-1 max-h-72 overflow-y-auto pr-1 custom-scrollbar"></div>
+        <p class="text-[11px] text-slate-400 border-t border-slate-100 pt-3">Se calcula comparando los miembros actuales del grupo/ministerio con quienes se marcaron presentes ese día.</p>
+      </div>
+    </div>
+
+    <!-- MODAL CREAR / EDITAR MINISTERIO -->
+    <div id="modal-crear-ministerio" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h3 class="text-lg font-bold text-slate-800" id="titulo-modal-ministerio">Crear Nuevo Ministerio</h3>
+          <button onclick="cerrarModalCrearMinisterio()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre del Ministerio *</label>
+            <input type="text" id="input-nombre-min" placeholder="Ej: Alabanza, Salida, Jóvenes, Niños" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Líder a Cargo</label>
+            <select id="select-lider-min" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700">
+              <option value="">Seleccionar líder de miembros...</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Miembros Integrantes del Ministerio</label>
+            <p class="text-[11px] text-slate-400 mb-2">Selecciona los miembros que pertenecen a este equipo:</p>
+            <div id="contenedor-check-miembros-min" class="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-2 bg-slate-50/50 custom-scrollbar"></div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+          <button onclick="cerrarModalCrearMinisterio()" class="border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition">Cancelar</button>
+          <button onclick="guardarNuevoMinisterio()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-semibold transition">Guardar Ministerio</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL CREAR / EDITAR EVENTO DE MINISTERIO -->
+    <div id="modal-evento-ministerio" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-5 my-8">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800" id="titulo-modal-evento-min">Agendar Evento / Servicio</h3>
+            <p class="text-xs text-slate-400" id="subtitulo-modal-evento-min">Ministerio</p>
+          </div>
+          <button onclick="cerrarModalEventoMinisterio()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+
+        <form id="form-evento-ministerio" onsubmit="guardarEventoMinisterio(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre o Tipo de Servicio *</label>
+            <input type="text" id="input-evento-min-nombre" required placeholder="Ej: Domingo de Alabanza, Reunión Semanal" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha *</label>
+              <input type="date" id="input-evento-min-fecha" required class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Hora</label>
+              <input type="time" id="input-evento-min-hora" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Servidores Asignados para este Día</label>
+            <p class="text-[11px] text-slate-400 mb-2">Selecciona quienes estarán sirviendo en esta fecha:</p>
+            <div id="contenedor-check-servidores" class="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-2 bg-slate-50/50 custom-scrollbar"></div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+            <button type="button" onclick="cerrarModalEventoMinisterio()" class="border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition">Cancelar</button>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-semibold transition">Guardar Evento & Equipo</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL CREAR NUEVO GRUPO -->
+    <div id="modal-crear-grupo" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5">
+        <div class="flex justify-between items-center">
+          <h3 class="text-lg font-bold text-slate-800">Crear Nuevo Grupo / Célula</h3>
+          <button onclick="cerrarModalCrearGrupo()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre del Grupo *</label>
+          <input type="text" id="input-nombre-grupo-nuevo" placeholder="Ej: Grupo Belgrano, Matrimonios, etc." class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button onclick="cerrarModalCrearGrupo()" class="border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium">Cancelar</button>
+          <button onclick="guardarGrupoNuevo()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-semibold">Guardar Grupo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL ESTADÍSTICA ANUAL -->
+    <div id="modal-estadistica-anual" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800" id="titulo-modal-estadistica-anual">Estadística</h3>
+            <p class="text-xs text-slate-400" id="subtitulo-modal-estadistica-anual">Evolución durante el año</p>
+          </div>
+          <button onclick="cerrarModalEstadisticaAnual()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <p id="tendencia-modal-estadistica-anual" class="text-xs font-semibold"></p>
+        <div class="h-72"><canvas id="chartEstadisticaAnual"></canvas></div>
+        <p id="sin-datos-modal-estadistica-anual" class="hidden text-xs text-slate-400 italic text-center py-6">Todavía no hay suficiente historial guardado para este año. Los datos se registran automáticamente cada día que uses la plataforma, así que mañana ya vas a ver el primer cambio.</p>
+      </div>
+    </div>
+
+    <!-- MODAL NUEVO / EDITAR / VER EVENTO ESPECIAL -->
+    <div id="modal-evento-especial" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800" id="titulo-modal-evento-especial">Nuevo Evento</h3>
+            <p class="text-xs text-slate-400" id="subtitulo-modal-evento-especial"></p>
+          </div>
+          <button onclick="cerrarModalEventoEspecial()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <form onsubmit="guardarEventoEspecial(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Título del evento *</label>
+            <input type="text" id="input-evento-esp-titulo" required placeholder="Ej: Congreso Anual, Vigilia de Oración" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:bg-slate-100 disabled:text-slate-500">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha *</label>
+              <input type="date" id="input-evento-esp-fecha" required class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700 disabled:bg-slate-100 disabled:text-slate-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Hora</label>
+              <input type="time" id="input-evento-esp-hora" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700 disabled:bg-slate-100 disabled:text-slate-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Lugar</label>
+            <input type="text" id="input-evento-esp-lugar" placeholder="Ej: Templo Central" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:bg-slate-100 disabled:text-slate-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Descripción</label>
+            <textarea id="input-evento-esp-desc" rows="3" placeholder="Detalles del evento..." class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none disabled:bg-slate-100 disabled:text-slate-500"></textarea>
+          </div>
+          <div class="flex justify-between items-center gap-2 pt-2 border-t border-slate-100">
+            <button type="button" id="btn-eliminar-evento-especial" onclick="eliminarEventoEspecial()" class="hidden text-red-600 hover:bg-red-50 px-3 py-2 rounded-xl text-sm font-medium transition">Eliminar</button>
+            <div class="flex gap-2 ml-auto">
+              <button type="button" onclick="cerrarModalEventoEspecial()" class="border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">Cerrar</button>
+              <button type="submit" id="btn-guardar-evento-especial" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-semibold">Guardar Evento</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL REVISIÓN DE SOLICITUDES -->
+    <div id="modal-revision-solicitudes" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-5">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">Solicitudes de Acceso Pendientes</h3>
+            <p class="text-xs text-slate-400">Notificaciones dirigidas a psocikian@gmail.com</p>
+          </div>
+          <button onclick="cerrarModalSolicitudes()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div id="contenedor-solicitudes-lista" class="space-y-3 max-h-60 overflow-y-auto pr-1"></div>
+      </div>
+    </div>
+
+    <!-- MODAL ASIGNAR ROL (APROBAR SOLICITUD O EDITAR LÍDER) -->
+    <div id="modal-asignar-rol" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800" id="titulo-modal-asignar-rol">Aprobar cuenta</h3>
+            <p class="text-xs text-slate-400" id="subtitulo-modal-asignar-rol">Usuario</p>
+          </div>
+          <button onclick="cerrarModalAsignarRol()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <form onsubmit="confirmarAsignacionRol(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Asignar rol *</label>
+            <select id="asignar-rol-select" required onchange="actualizarCamposAsignacionRol()" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700">
+              <option value="">Seleccionar rol...</option>
+              <option value="Líder">Líder</option>
+              <option value="Consolidador">Consolidador</option>
+            </select>
+          </div>
+          <div id="campos-asignacion-lider" class="hidden space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Grupos Pequeños / Células a cargo</label>
+              <div id="contenedor-check-lider-grupos" class="max-h-32 overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-2 bg-slate-50/50 custom-scrollbar"></div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Ministerios a cargo</label>
+              <div id="contenedor-check-lider-ministerios" class="max-h-32 overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-2 bg-slate-50/50 custom-scrollbar"></div>
+            </div>
+            <p class="text-[11px] text-slate-400">El líder verá los miembros de todos los grupos y ministerios que marques. Puede tener más de uno.</p>
+          </div>
+          <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <button type="button" onclick="cerrarModalAsignarRol()" class="border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">Cancelar</button>
+            <button type="submit" id="btn-confirmar-asignar-rol" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-sm font-semibold">Aprobar cuenta</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- OTROS MÓDULOS -->
+    <!-- VISTA: COMUNICACIÓN -->
+    <div id="view-comunicaciones" class="tab-content hidden space-y-6">
+      <div>
+        <h2 class="text-xl font-bold text-slate-800">Comunicación</h2>
+        <p class="text-xs text-slate-400">Accesos rápidos a tus canales de mensajería y asistente para redactar mensajes</p>
+      </div>
+
+      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3">
+        <i data-lucide="info" class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5"></i>
+        <p class="text-xs text-amber-800">Por seguridad, WhatsApp, Messenger e Instagram no dejan mostrar tus conversaciones reales dentro de otra página web sin conectar la cuenta oficial de Meta Business de la iglesia (eso requiere un servidor propio, además de este archivo). Mientras tanto, estos botones te llevan directo a cada chat en una pestaña nueva.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-3">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl"><i data-lucide="message-circle" class="w-5 h-5"></i></div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">WhatsApp</h3>
+              <p class="text-[11px] text-slate-400">web.whatsapp.com</p>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500 flex-1">Ver y responder los mensajes de WhatsApp de la iglesia.</p>
+          <a href="https://web.whatsapp.com" target="_blank" rel="noopener" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl text-center transition">Abrir WhatsApp</a>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-3">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="message-square" class="w-5 h-5"></i></div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">Messenger</h3>
+              <p class="text-[11px] text-slate-400">messenger.com</p>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500 flex-1">Ver y responder los mensajes de Facebook Messenger.</p>
+          <a href="https://www.messenger.com" target="_blank" rel="noopener" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl text-center transition">Abrir Messenger</a>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-3">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 bg-pink-50 text-pink-600 rounded-xl"><i data-lucide="instagram" class="w-5 h-5"></i></div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">Instagram</h3>
+              <p class="text-[11px] text-slate-400">instagram.com/direct</p>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500 flex-1">Ver y responder los mensajes directos de Instagram.</p>
+          <a href="https://www.instagram.com/direct/inbox/" target="_blank" rel="noopener" class="bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl text-center transition">Abrir Instagram</a>
+        </div>
+      </div>
+
+      <!-- ASISTENTE DE MENSAJES -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-5">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl"><i data-lucide="sparkles" class="w-5 h-5"></i></div>
+          <div>
+            <h3 class="font-bold text-slate-800">Asistente de Mensajes</h3>
+            <p class="text-xs text-slate-400">Arma borradores para invitaciones, recordatorios y avisos en segundos</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Tipo de mensaje</label>
+            <select id="asistente-tipo-mensaje" onchange="generarMensajeAsistente()" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-700">
+              <option value="invitacion_evento">Invitación a un evento</option>
+              <option value="recordatorio_celula">Recordatorio de célula / grupo</option>
+              <option value="bienvenida">Bienvenida a un nuevo miembro</option>
+              <option value="seguimiento_prospecto">Seguimiento a un prospecto</option>
+              <option value="aviso_general">Aviso general</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre (opcional)</label>
+            <input type="text" id="asistente-nombre" oninput="generarMensajeAsistente()" placeholder="Ej: Juan" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Evento / Tema</label>
+            <input type="text" id="asistente-tema" oninput="generarMensajeAsistente()" placeholder="Ej: Congreso Anual" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha / Hora</label>
+            <input type="text" id="asistente-fecha-hora" oninput="generarMensajeAsistente()" placeholder="Ej: Sábado 15 de agosto, 18hs" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Borrador generado</label>
+          <textarea id="asistente-resultado" rows="5" readonly class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-slate-50/50 text-slate-700 resize-none"></textarea>
+        </div>
+
+        <div class="flex flex-wrap justify-end gap-2">
+          <button type="button" onclick="copiarMensajeAsistente()" class="border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2 rounded-xl text-sm transition flex items-center gap-2">
+            <i data-lucide="copy" class="w-4 h-4"></i> Copiar mensaje
+          </button>
+          <a id="asistente-btn-whatsapp" href="https://wa.me/" target="_blank" rel="noopener" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition flex items-center gap-2">
+            <i data-lucide="send" class="w-4 h-4"></i> Enviar por WhatsApp
+          </a>
+        </div>
+
+        <p class="text-[11px] text-slate-400 border-t border-slate-100 pt-3">💡 Estos son mensajes armados con plantillas, no una inteligencia artificial redactando en vivo. Si más adelante querés textos generados por una IA real (que entienda el contexto y escriba distinto cada vez), eso se puede conectar, pero requiere una cuenta de API de un proveedor de IA y tiene un costo de uso.</p>
+      </div>
+    </div>
+
+    <!-- VISTA: EVENTOS (CALENDARIO DE EVENTOS ESPECIALES) -->
+    <div id="view-eventos" class="tab-content hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="flex flex-wrap items-center justify-between gap-4 p-6 pb-4">
+          <div>
+            <h2 id="calendario-titulo-mes" class="text-2xl font-bold text-slate-900">Mes de Año</h2>
+            <p class="text-xs text-slate-400 mt-1">Eventos especiales de la iglesia</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="cambiarMesCalendario(-1)" class="p-2 border border-slate-200 rounded-xl hover:bg-slate-100 text-slate-600 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+            <button onclick="irHoyCalendario()" class="px-3 py-2 border border-slate-200 rounded-xl hover:bg-slate-100 text-slate-600 text-sm font-semibold transition">Hoy</button>
+            <button onclick="cambiarMesCalendario(1)" class="p-2 border border-slate-200 rounded-xl hover:bg-slate-100 text-slate-600 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+            <button id="btn-nuevo-evento-especial" onclick="abrirNuevoEventoDesdeCalendario()" class="hidden bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl inline-flex items-center gap-2 transition ml-2">
+              <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Evento
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-7 border-t border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+          <div class="p-3 text-center">Lun</div>
+          <div class="p-3 text-center">Mar</div>
+          <div class="p-3 text-center">Mié</div>
+          <div class="p-3 text-center">Jue</div>
+          <div class="p-3 text-center">Vie</div>
+          <div class="p-3 text-center bg-slate-50/60">Sáb</div>
+          <div class="p-3 text-center bg-slate-50/60">Dom</div>
+        </div>
+
+        <div id="calendario-grid" class="grid grid-cols-7 border-t border-slate-100"></div>
+      </div>
+
+      <!-- LISTA DE EVENTOS DEL DÍA SELECCIONADO (estilo iPhone: tocás un día y ves su agenda) -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+        <div class="flex items-center justify-between gap-3">
+          <h3 id="titulo-dia-seleccionado" class="font-bold text-slate-800">Seleccioná un día</h3>
+          <button id="btn-agregar-evento-dia" onclick="abrirNuevoEventoDesdeCalendario()" class="hidden bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 transition flex-shrink-0">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Agregar
+          </button>
+        </div>
+        <div id="lista-eventos-dia" class="space-y-2"></div>
+      </div>
+    </div>
+    <div id="view-cursos" class="tab-content hidden space-y-6"><div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm"><h3 class="font-bold">Módulo Escuela Bíblica</h3></div></div>
+    <div id="view-appmovil" class="tab-content hidden space-y-6"><div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm"><h3 class="font-bold">Módulo App Móvil</h3></div></div>
+    <div id="view-configuracion" class="tab-content hidden space-y-6"><div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm"><h3 class="font-bold">Módulo Configuración</h3></div></div>
+
+  </main>
+
+  </div><!-- /#app-screen -->
+
+  <script>
+    lucide.createIcons();
+
+    const HOST_EMAIL = "psocikian@gmail.com";
+
+    // CLAVES CONFIGURADAS DE EMAILJS
+    const EMAILJS_PUBLIC_KEY = "0HSh5_Ka-ILgIC-DJ";
+    const EMAILJS_TEMPLATE_ID = "template_ugum9ge";
+    const EMAILJS_SERVICE_ID = "service_m9pno7h";
+
+    if (typeof emailjs !== "undefined") {
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+    }
+
+    // ID DE CLIENTE DE GOOGLE PARA "INICIAR SESIÓN CON GOOGLE"
+    // Reemplazá esto por tu propio Client ID de Google Cloud Console (ver instrucciones del asistente).
+    // Mientras diga "TU_GOOGLE_CLIENT_ID..." el botón de Google queda oculto automáticamente.
+    const GOOGLE_CLIENT_ID = "TU_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+
+    // USUARIO ADMIN PREDETERMINADO (siempre existe: es la cuenta que gestiona la iglesia)
+    // La contraseña "Iangenio10" está guardada como hash SHA-256, nunca en texto plano.
+    const ADMIN_PREDETERMINADO = { nombre: "Psocikian", email: "psocikian@gmail.com", passHash: "7c68ba9f4b33e8abc44a5da52946f3f750533ad98133dddc2a9c96469bfa60fc", estado: "aprobado", rol: "Anfitrión Súper Admin" };
+    let usuarios = JSON.parse(localStorage.getItem('miiglesia_usuarios')) || [];
+    if (!usuarios.some(u => u.email === ADMIN_PREDETERMINADO.email)) {
+      usuarios.push(ADMIN_PREDETERMINADO);
+    }
+    let usuarioActivo = null;
+    let miembros = JSON.parse(localStorage.getItem('miiglesia_miembros')) || [];
+    let grupos = JSON.parse(localStorage.getItem('miiglesia_grupos')) || ['Líderes'];
+    let ministerios = JSON.parse(localStorage.getItem('miiglesia_ministerios')) || [
+      { id: 1, nombre: "Alabanza & Adoración", lider: "Sin asignar", miembros: [], eventos: [] },
+      { id: 2, nombre: "Niños & Escuela Dominical", lider: "Sin asignar", miembros: [], eventos: [] }
+    ];
+    let prospectos = JSON.parse(localStorage.getItem('miiglesia_prospectos')) || [
+      { id: 1, nombre: "Martin Luther", telefono: "+542983345988", fecha: "2026-08-05", etapa: "Nuevos", respondio: "Sí", visitas: "1", celula: "No" }
+    ];
+    // asistencias: { id, tipo: 'grupo'|'ministerio', nombre, fecha, presentes: ["Nombre Apellido", ...], total, registradoPor }
+    let asistencias = JSON.parse(localStorage.getItem('miiglesia_asistencias')) || [];
+    // historicoDiario: una "foto" por día de las estadísticas del panel, para poder ver la evolución en el año
+    // { fecha: 'YYYY-MM-DD', miembros, visitantes, consolidacionPct, asistenciaPct, proyeccion }
+    let historicoDiario = JSON.parse(localStorage.getItem('miiglesia_historico')) || [];
+    // eventosEspeciales: eventos generales de la iglesia (NO son los eventos internos de cada ministerio)
+    // { id, titulo, fecha: 'YYYY-MM-DD', hora, lugar, descripcion, creadoPor }
+    let eventosEspeciales = JSON.parse(localStorage.getItem('miiglesia_eventos_especiales')) || [];
+
+    let tempFoto = null;
+    let minSeleccionadoId = null;
+    let ministerioEditandoId = null;
+    let eventoEditandoId = null;
+    let prospectoEditandoId = null;
+    let scopeAsistenciaActual = null;
+    let scopesAsistenciaCache = [];
+    let calendarioMesActual = new Date();
+    let eventoEspecialEditandoId = null;
+    let diaSeleccionadoCalendario = null; // se inicializa en "hoy" la primera vez que se abre el calendario
+    let intentosLogin = JSON.parse(localStorage.getItem('miiglesia_intentos_login')) || {};
+    let registroPendienteVerificacion = null; // { nombre, email, passHash, codigo, expira }
+
+    function guardarMemoria() {
+      localStorage.setItem('miiglesia_usuarios', JSON.stringify(usuarios));
+      if (usuarioActivo) {
+        guardarSesionActiva(usuarioActivo); // renueva la expiración de la sesión mientras esté activo
+      } else {
+        localStorage.removeItem('miiglesia_usuario_activo');
+      }
+      localStorage.setItem('miiglesia_miembros', JSON.stringify(miembros));
+      localStorage.setItem('miiglesia_grupos', JSON.stringify(grupos));
+      localStorage.setItem('miiglesia_ministerios', JSON.stringify(ministerios));
+      localStorage.setItem('miiglesia_prospectos', JSON.stringify(prospectos));
+      localStorage.setItem('miiglesia_asistencias', JSON.stringify(asistencias));
+      localStorage.setItem('miiglesia_eventos_especiales', JSON.stringify(eventosEspeciales));
+
+      renderGruposDropdowns();
+      renderTabla();
+      renderTarjetasGrupos();
+      renderMinisterios();
+      renderConsolidacion();
+      renderAsistencia();
+      renderLideres();
+      renderCalendarioEventos();
+      actualizarContadores();
+      actualizarGraficos();
+      registrarSnapshotDiario();
+      actualizarInterfazUsuario();
+    }
+
+    // Guarda (o actualiza si ya existe) la "foto" de hoy con los valores actuales del panel.
+    // Así, día a día, se arma el historial que permite ver si una estadística subió o bajó.
+    function registrarSnapshotDiario() {
+      const hoy = new Date().toISOString().split('T')[0];
+
+      const consolidadosCnt = prospectos.filter(p => p.etapa === 'Consolidados').length;
+      const pctConsolidacion = prospectos.length > 0 ? Math.round((consolidadosCnt / prospectos.length) * 100) : 0;
+      const pctAsistencia = calcularPctAsistenciaCelulas();
+
+      const snapshot = {
+        fecha: hoy,
+        miembros: miembros.length,
+        visitantes: prospectos.length,
+        consolidacionPct: pctConsolidacion,
+        asistenciaPct: pctAsistencia === null ? 0 : pctAsistencia,
+        proyeccion: calcularProyeccionProspectos()
+      };
+
+      const idx = historicoDiario.findIndex(h => h.fecha === hoy);
+      if (idx >= 0) {
+        historicoDiario[idx] = snapshot;
+      } else {
+        historicoDiario.push(snapshot);
+      }
+
+      localStorage.setItem('miiglesia_historico', JSON.stringify(historicoDiario));
+    }
+
+    function actualizarInterfazUsuario() {
+      if(!usuarioActivo) return;
+
+      document.getElementById('user-name-display').innerText = usuarioActivo.nombre;
+      document.getElementById('user-role-display').innerText = usuarioActivo.rol;
+      document.getElementById('user-avatar-badge').innerText = usuarioActivo.nombre.substring(0, 2).toUpperCase();
+
+      const btnHost = document.getElementById('btn-solicitudes-host');
+      const pendientes = usuarios.filter(u => u.estado === 'pendiente');
+
+      if(usuarioActivo.email === HOST_EMAIL && pendientes.length > 0) {
+        btnHost.classList.remove('hidden');
+        document.getElementById('cnt-solicitudes').innerText = pendientes.length;
+      } else {
+        btnHost.classList.add('hidden');
+      }
+    }
+
+    /* SISTEMA DE ESTADÍSTICAS Y PANEL DE CONTROL SINCRONIZADO */
+    function actualizarContadores() {
+      // 1. Contadores del módulo miembros
+      const elemActivos = document.getElementById('stat-miembros-activos');
+      const elemGruposCnt = document.getElementById('stat-grupos-activos');
+      const elemBautizadosCnt = document.getElementById('stat-miembros-bautizados');
+
+      const listaScope = getMiembrosVisibles();
+      const bautizadosTotal = listaScope.filter(m => m.bautizado === 'Sí').length;
+
+      if(elemActivos) elemActivos.innerText = listaScope.length;
+      if(elemGruposCnt) elemGruposCnt.innerText = grupos.length;
+      if(elemBautizadosCnt) elemBautizadosCnt.innerText = bautizadosTotal;
+
+      // 2. Métricas del Panel de Control (Dashboard)
+      const elemDashMiembros = document.getElementById('dash-miembros-cnt');
+      const elemDashVisitantes = document.getElementById('dash-visitantes-cnt');
+      const elemDashConsolidacion = document.getElementById('dash-consolidacion-pct');
+      const elemDashAsistenciaGrupos = document.getElementById('dash-asistencia-grupos-pct');
+
+      if(elemDashMiembros) elemDashMiembros.innerText = listaScope.length;
+      if(elemDashVisitantes) elemDashVisitantes.innerText = prospectos.length;
+
+      // Porcentaje de Consolidación
+      const consolidadosCnt = prospectos.filter(p => p.etapa === 'Consolidados').length;
+      const pctConsolidacion = prospectos.length > 0 ? Math.round((consolidadosCnt / prospectos.length) * 100) : 0;
+      if(elemDashConsolidacion) elemDashConsolidacion.innerText = `${pctConsolidacion}%`;
+
+      const badgeConsolidacion = document.getElementById('badge-consolidacion-status');
+      if(badgeConsolidacion) {
+        if(pctConsolidacion < 30) {
+          badgeConsolidacion.innerText = "● Crítico";
+          badgeConsolidacion.className = "text-[11px] text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded-full inline-block mt-2";
+        } else {
+          badgeConsolidacion.innerText = "● Estable";
+          badgeConsolidacion.className = "text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-2";
+        }
+      }
+
+      // Porcentaje de Asistencia a Células / Grupos Pequeños (basado en los registros reales del módulo Asistencia)
+      const pctGrupos = calcularPctAsistenciaCelulas();
+      if(elemDashAsistenciaGrupos) elemDashAsistenciaGrupos.innerText = pctGrupos === null ? 'N/A' : `${pctGrupos}%`;
+
+      const badgeGrupos = document.getElementById('badge-grupos-status');
+      if(badgeGrupos) {
+        if(pctGrupos === null) {
+          badgeGrupos.innerText = "● Sin registros";
+          badgeGrupos.className = "text-[11px] text-slate-400 font-semibold bg-slate-100 px-2 py-0.5 rounded-full inline-block mt-2";
+        } else if(pctGrupos < 40) {
+          badgeGrupos.innerText = "● Bajo";
+          badgeGrupos.className = "text-[11px] text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded-full inline-block mt-2";
+        } else {
+          badgeGrupos.innerText = "● Óptimo";
+          badgeGrupos.className = "text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-2";
+        }
+      }
+
+      // Proyección de prospectos para la próxima semana (promedio de las últimas 4 semanas)
+      const elemProyeccion = document.getElementById('dash-proyeccion-prospectos');
+      if(elemProyeccion) elemProyeccion.innerText = calcularProyeccionProspectos();
+    }
+
+    function calcularPctAsistenciaCelulas() {
+      const registrosGrupo = asistencias.filter(a => a.tipo === 'grupo');
+      if (registrosGrupo.length === 0) return null;
+
+      // Se toma el registro más reciente de cada grupo, para no repetir semanas ya pasadas
+      const ultimoPorGrupo = {};
+      registrosGrupo.forEach(r => {
+        if (!ultimoPorGrupo[r.nombre] || r.fecha > ultimoPorGrupo[r.nombre].fecha) {
+          ultimoPorGrupo[r.nombre] = r;
+        }
+      });
+
+      const registros = Object.values(ultimoPorGrupo);
+      const totalPresentes = registros.reduce((sum, r) => sum + r.presentes.length, 0);
+      const totalEsperado = registros.reduce((sum, r) => sum + r.total, 0);
+
+      return totalEsperado > 0 ? Math.round((totalPresentes / totalEsperado) * 100) : 0;
+    }
+
+    function calcularProyeccionProspectos() {
+      const fechasValidas = prospectos.map(p => p.fecha).filter(Boolean).sort();
+      if (fechasValidas.length === 0) return 0;
+
+      const hoy = new Date();
+      const primeraFecha = new Date(fechasValidas[0]);
+      const semanasConHistorial = Math.floor((hoy - primeraFecha) / (7 * 24 * 60 * 60 * 1000)) + 1;
+      const semanas = Math.min(4, Math.max(1, semanasConHistorial));
+
+      let totalUltimasSemanas = 0;
+      for (let i = 0; i < semanas; i++) {
+        const fin = new Date(hoy);
+        fin.setDate(fin.getDate() - i * 7);
+        const inicio = new Date(fin);
+        inicio.setDate(inicio.getDate() - 6);
+        const inicioStr = inicio.toISOString().split('T')[0];
+        const finStr = fin.toISOString().split('T')[0];
+        totalUltimasSemanas += prospectos.filter(p => p.fecha && p.fecha >= inicioStr && p.fecha <= finStr).length;
+      }
+
+      return Math.round(totalUltimasSemanas / semanas);
+    }
+
+    /* ============ ESTADÍSTICA ANUAL (HISTORIAL DÍA A DÍA) ============ */
+
+    const METRICAS_ANUALES = {
+      miembros: { titulo: 'Miembros Activos', color: '#2563eb', campo: 'miembros', sufijo: '' },
+      visitantes: { titulo: 'Nuevos Visitantes', color: '#64748b', campo: 'visitantes', sufijo: '' },
+      consolidacion: { titulo: 'Consolidación', color: '#16a34a', campo: 'consolidacionPct', sufijo: '%' },
+      asistencia: { titulo: '% Asistencia Células', color: '#f59e0b', campo: 'asistenciaPct', sufijo: '%' },
+      proyeccion: { titulo: 'Proyección de Prospectos', color: '#6366f1', campo: 'proyeccion', sufijo: '' }
+    };
+
+    let chartAnualInstance = null;
+
+    function abrirModalEstadisticaAnual(metrica) {
+      const info = METRICAS_ANUALES[metrica];
+      if (!info) return;
+
+      const anioActual = new Date().getFullYear();
+      const registros = historicoDiario
+        .filter(h => h.fecha.startsWith(String(anioActual)))
+        .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+      document.getElementById('titulo-modal-estadistica-anual').innerText = info.titulo;
+      document.getElementById('subtitulo-modal-estadistica-anual').innerText = `Evolución durante ${anioActual}`;
+
+      const tendenciaEl = document.getElementById('tendencia-modal-estadistica-anual');
+      const sinDatosEl = document.getElementById('sin-datos-modal-estadistica-anual');
+      const canvasEl = document.getElementById('chartEstadisticaAnual');
+
+      if (registros.length === 0) {
+        tendenciaEl.innerText = '';
+        sinDatosEl.classList.remove('hidden');
+        canvasEl.classList.add('hidden');
+      } else {
+        sinDatosEl.classList.add('hidden');
+        canvasEl.classList.remove('hidden');
+
+        const etiquetas = registros.map(r => formatearFechaAsistencia(r.fecha));
+        const datos = registros.map(r => r[info.campo]);
+
+        if (registros.length >= 2) {
+          const actual = datos[datos.length - 1];
+          const anterior = datos[datos.length - 2];
+          if (actual > anterior) {
+            tendenciaEl.innerHTML = `<span class="text-emerald-600">▲ Subió desde el último registro: ${anterior}${info.sufijo} → ${actual}${info.sufijo}</span>`;
+          } else if (actual < anterior) {
+            tendenciaEl.innerHTML = `<span class="text-red-600">▼ Bajó desde el último registro: ${anterior}${info.sufijo} → ${actual}${info.sufijo}</span>`;
+          } else {
+            tendenciaEl.innerHTML = `<span class="text-slate-500">● Se mantuvo igual que el último registro: ${actual}${info.sufijo}</span>`;
+          }
+        } else {
+          tendenciaEl.innerHTML = `<span class="text-slate-400">Este es el primer registro del año. Mañana vas a poder comparar.</span>`;
+        }
+
+        if (chartAnualInstance) {
+          chartAnualInstance.destroy();
+        }
+        chartAnualInstance = new Chart(canvasEl.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: etiquetas,
+            datasets: [{
+              data: datos,
+              borderColor: info.color,
+              backgroundColor: info.color + '15',
+              borderWidth: 2,
+              tension: 0.3,
+              fill: true,
+              pointRadius: registros.length > 30 ? 0 : 3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { borderDash: [4, 4] } },
+              x: { grid: { display: false }, ticks: { autoSkip: true, maxTicksLimit: 12 } }
+            }
+          }
+        });
+      }
+
+      document.getElementById('modal-estadistica-anual').classList.remove('hidden');
+    }
+
+    function cerrarModalEstadisticaAnual() {
+      document.getElementById('modal-estadistica-anual').classList.add('hidden');
+    }
+
+    function abrirModalSolicitudes() {
+      if(!usuarioActivo || usuarioActivo.email !== HOST_EMAIL) return;
+
+      const container = document.getElementById('contenedor-solicitudes-lista');
+      container.innerHTML = '';
+
+      const pendientes = usuarios.filter(u => u.estado === 'pendiente');
+
+      if (pendientes.length === 0) {
+        container.innerHTML = `<p class="text-sm text-slate-400 text-center py-4">No hay solicitudes pendientes.</p>`;
+      } else {
+        pendientes.forEach((sol) => {
+          const item = document.createElement('div');
+          item.className = "flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl";
+          item.innerHTML = `
+            <div>
+              <p class="font-bold text-slate-800 text-sm">${sol.nombre}</p>
+              <p class="text-xs text-slate-400">${sol.email}</p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="abrirModalAsignarRol('${sol.email}')" class="bg-emerald-600 text-white p-1.5 rounded-lg hover:bg-emerald-700 transition" title="Aprobar"><i data-lucide="check" class="w-4 h-4"></i></button>
+              <button onclick="responderSolicitud('${sol.email}', false)" class="bg-red-600 text-white p-1.5 rounded-lg hover:bg-red-700 transition" title="Desaprobar"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+          `;
+          container.appendChild(item);
+        });
+        lucide.createIcons();
+      }
+
+      document.getElementById('modal-revision-solicitudes').classList.remove('hidden');
+    }
+
+    function cerrarModalSolicitudes() {
+      document.getElementById('modal-revision-solicitudes').classList.add('hidden');
+    }
+
+    function responderSolicitud(email, aprobado) {
+      const user = usuarios.find(u => u.email === email);
+      if (user) {
+        user.estado = aprobado ? 'aprobado' : 'rechazado';
+        guardarMemoria();
+        abrirModalSolicitudes();
+        alert(`La cuenta de ${user.nombre} (${user.email}) ha sido ${aprobado ? 'APROBADA' : 'DESAPROBADA'}.`);
+      }
+    }
+
+    function calcularEdad() {
+      const nac = document.getElementById('input-nacimiento').value;
+      if (!nac) return;
+      const dob = new Date(nac);
+      const diff = Date.now() - dob.getTime();
+      const ageDate = new Date(diff);
+      const edadVal = Math.abs(ageDate.getUTCFullYear() - 1970);
+      
+      let cat = "Adultos";
+      if (edadVal <= 11) cat = "Niños";
+      else if (edadVal <= 14) cat = "Pre-Ados";
+      else if (edadVal <= 17) cat = "Adolescentes";
+      else if (edadVal <= 25) cat = "Jóvenes";
+      else if (edadVal <= 35) cat = "Jóvenes +";
+      else if (edadVal <= 64) cat = "Adultos";
+      else cat = "Ancianos";
+
+      document.getElementById('input-categoria-edad').value = `${cat} (${edadVal} años)`;
+    }
+
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          tempFoto = e.target.result;
+          document.getElementById('avatar-preview').innerHTML = `<img src="${tempFoto}" class="w-full h-full object-cover">`;
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    /* MÓDULO CONSOLIDACIÓN */
+    function renderConsolidacion() {
+      const tbody = document.getElementById('tabla-consolidacion-body');
+      if(!tbody) return;
+      tbody.innerHTML = '';
+
+      const query = document.getElementById('input-buscar-prospecto')?.value.toLowerCase() || '';
+      const filtrados = prospectos.filter(p => p.nombre.toLowerCase().includes(query) || p.telefono.includes(query));
+
+      document.getElementById('stat-prospectos-total').innerText = prospectos.length;
+      document.getElementById('stat-prospectos-respondió').innerText = prospectos.filter(p => p.respondio === 'Sí').length;
+      document.getElementById('stat-prospectos-volvieron').innerText = prospectos.filter(p => p.visitas === '2' || p.visitas === '3+').length;
+      document.getElementById('stat-prospectos-celula').innerText = prospectos.filter(p => p.celula === 'Sí').length;
+
+      if(filtrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400 text-xs">No se encontraron prospectos o personas en seguimiento.</td></tr>`;
+        return;
+      }
+
+      filtrados.forEach((p) => {
+        const row = document.createElement('tr');
+        row.className = "hover:bg-slate-50/80 transition";
+
+        const badgeEtapa = p.etapa === 'Consolidados' 
+          ? '<span class="bg-emerald-50 text-emerald-600 font-semibold px-2.5 py-1 rounded-full text-xs">● Consolidados</span>'
+          : p.etapa === 'En Seguimiento'
+          ? '<span class="bg-blue-50 text-blue-600 font-semibold px-2.5 py-1 rounded-full text-xs">● En Seguimiento</span>'
+          : '<span class="bg-amber-50 text-amber-600 font-semibold px-2.5 py-1 rounded-full text-xs">● Nuevos</span>';
+
+        const badgeRespondio = p.respondio === 'Sí'
+          ? '<span class="text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-lg text-xs">✓ Sí</span>'
+          : p.respondio === 'No'
+          ? '<span class="text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded-lg text-xs">✕ No</span>'
+          : '<span class="text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg text-xs">Pendiente</span>';
+
+        const badgeVisitas = p.visitas === '0'
+          ? '<span class="text-slate-500">Solo 1ª visita</span>'
+          : `<span class="font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg">${p.visitas} vez/veces más</span>`;
+
+        const badgeCelula = p.celula === 'Sí'
+          ? '<span class="text-emerald-600 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full text-xs">🏠 Integrado</span>'
+          : '<span class="text-slate-400 text-xs">No integrado</span>';
+
+        row.innerHTML = `
+          <td class="py-3.5 px-4 font-bold text-slate-800">${p.nombre}</td>
+          <td class="py-3.5 px-4 text-slate-500 text-xs">${p.telefono}</td>
+          <td class="py-3.5 px-4">${badgeEtapa}</td>
+          <td class="py-3.5 px-4 text-xs">${badgeRespondio}</td>
+          <td class="py-3.5 px-4 text-xs">${badgeVisitas}</td>
+          <td class="py-3.5 px-4 text-xs">${badgeCelula}</td>
+          <td class="py-3.5 px-4 flex items-center gap-2">
+            <button onclick="abrirModalSeguimiento(${p.id})" class="bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 p-1.5 rounded-lg transition" title="Editar seguimiento">
+              <i data-lucide="edit-3" class="w-4 h-4"></i>
+            </button>
+            <button onclick="eliminarProspecto(${p.id})" class="text-slate-400 hover:text-red-600 p-1.5 transition" title="Eliminar">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+      lucide.createIcons();
+    }
+
+    function abrirModalNuevoProspecto() {
+      document.getElementById('modal-nuevo-prospecto').classList.remove('hidden');
+    }
+
+    function cerrarModalNuevoProspecto() {
+      document.getElementById('modal-nuevo-prospecto').classList.add('hidden');
+      document.getElementById('input-prospecto-nombre').value = '';
+      document.getElementById('input-prospecto-telefono').value = '';
+    }
+
+    function guardarNuevoProspecto(e) {
+      e.preventDefault();
+      const nombre = document.getElementById('input-prospecto-nombre').value.trim();
+      const telefono = document.getElementById('input-prospecto-telefono').value.trim();
+      const fecha = document.getElementById('input-prospecto-fecha').value;
+
+      if(!nombre || !telefono) return;
+
+      const nuevo = {
+        id: Date.now(),
+        nombre,
+        telefono,
+        fecha,
+        etapa: "Nuevos",
+        respondio: "Pendiente",
+        visitas: "0",
+        celula: "No"
+      };
+
+      prospectos.unshift(nuevo);
+      guardarMemoria();
+      cerrarModalNuevoProspecto();
+    }
+
+    function abrirModalSeguimiento(id) {
+      prospectoEditandoId = id;
+      const p = prospectos.find(item => item.id === id);
+      if(!p) return;
+
+      document.getElementById('subtitulo-modal-seguimiento').innerText = `Prospecto: ${p.nombre}`;
+      document.getElementById('edit-prospecto-etapa').value = p.etapa || 'Nuevos';
+      document.getElementById('edit-prospecto-respondio').value = p.respondio || 'Pendiente';
+      document.getElementById('edit-prospecto-visitas').value = p.visitas || '0';
+      document.getElementById('edit-prospecto-celula').value = p.celula || 'No';
+
+      document.getElementById('modal-editar-seguimiento').classList.remove('hidden');
+    }
+
+    function cerrarModalSeguimiento() {
+      document.getElementById('modal-editar-seguimiento').classList.add('hidden');
+      prospectoEditandoId = null;
+    }
+
+    function guardarSeguimiento(e) {
+      e.preventDefault();
+      if(!prospectoEditandoId) return;
+
+      const p = prospectos.find(item => item.id === prospectoEditandoId);
+      if(p) {
+        const etapaAnterior = p.etapa;
+        const nuevaEtapa = document.getElementById('edit-prospecto-etapa').value;
+
+        p.etapa = nuevaEtapa;
+        p.respondio = document.getElementById('edit-prospecto-respondio').value;
+        p.visitas = document.getElementById('edit-prospecto-visitas').value;
+        p.celula = document.getElementById('edit-prospecto-celula').value;
+
+        if(etapaAnterior !== 'Consolidados' && nuevaEtapa === 'Consolidados') {
+          const partesNombre = p.nombre.split(' ');
+          const nombreVal = partesNombre[0] || p.nombre;
+          const apellidoVal = partesNombre.slice(1).join(' ') || 'Visita';
+
+          const existeYa = miembros.some(m => m.telefono === p.telefono || (m.nombre === nombreVal && m.apellido === apellidoVal));
+
+          if(!existeYa) {
+            miembros.unshift({
+              nombre: nombreVal,
+              apellido: apellidoVal,
+              sexo: 'Masculino',
+              nacimiento: '',
+              categoriaEdad: 'Adultos',
+              barrio: '-',
+              telefono: p.telefono,
+              email: '-',
+              direccion: '-',
+              ingreso: new Date().toISOString().split('T')[0],
+              bautizado: 'No',
+              grupo: 'Sin grupo',
+              foto: null
+            });
+            alert(`🎉 ¡Atención! ${p.nombre} ha sido marcado como "Consolidado" y se agregó automáticamente al Módulo de Miembros.`);
+          }
+        }
+
+        guardarMemoria();
+        cerrarModalSeguimiento();
+      }
+    }
+
+    function eliminarProspecto(id) {
+      if(confirm('¿Deseas eliminar este registro de prospecto?')) {
+        prospectos = prospectos.filter(p => p.id !== id);
+        guardarMemoria();
+      }
+    }
+
+    function renderGruposDropdowns() {
+      const selFiltro = document.getElementById('select-filtro-grupo');
+      const selForm = document.getElementById('input-grupo-form');
+      if(!selFiltro || !selForm) return;
+
+      const valFiltro = selFiltro.value;
+      const valForm = selForm.value;
+
+      selFiltro.innerHTML = '<option value="">Todos los grupos</option>';
+      selForm.innerHTML = '<option value="Sin grupo">Sin grupo</option>';
+
+      grupos.forEach(g => {
+        selFiltro.innerHTML += `<option value="${g}">${g}</option>`;
+        selForm.innerHTML += `<option value="${g}">${g}</option>`;
+      });
+
+      selFiltro.value = valFiltro;
+      selForm.value = valForm;
+    }
+
+    function renderTarjetasGrupos() {
+      const container = document.getElementById('lista-grupos-cards');
+      if(!container) return;
+      container.innerHTML = '';
+
+      if(grupos.length === 0) {
+        container.innerHTML = `<p class="text-sm text-slate-400 col-span-full py-4 text-center">No hay grupos creados aún.</p>`;
+        return;
+      }
+
+      grupos.forEach((grupo, idx) => {
+        const miembrosEnGrupo = miembros.filter(m => m.grupo === grupo).length;
+        const card = document.createElement('div');
+        card.className = "bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="users" class="w-5 h-5"></i></span>
+              <button onclick="eliminarGrupo(${idx})" title="Eliminar Grupo" class="text-slate-400 hover:text-red-600 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </div>
+            <h3 class="font-bold text-slate-800 text-lg">${grupo}</h3>
+            <p class="text-xs text-slate-400 mt-1">${miembrosEnGrupo} Miembro(s) asignado(s)</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+            <button onclick="switchTab('miembros')" class="text-xs text-blue-600 font-semibold hover:underline">Ver miembros &rarr;</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    /* MÓDULO MINISTERIOS CON EDITAR Y ELIMINAR EVENTOS + MIEMBROS INTEGRANTES */
+    function renderMinisterios() {
+      const container = document.getElementById('contenedor-ministerios-cards');
+      if(!container) return;
+      container.innerHTML = '';
+
+      if(ministerios.length === 0) {
+        container.innerHTML = `<p class="text-sm text-slate-400 col-span-full py-8 text-center">No hay ministerios registrados. ¡Crea el primero!</p>`;
+        return;
+      }
+
+      ministerios.forEach((m) => {
+        const card = document.createElement('div');
+        card.className = "bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-4";
+        
+        let eventosHTML = '';
+        if(m.eventos && m.eventos.length > 0) {
+          eventosHTML = m.eventos.map(ev => `
+            <div class="bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs space-y-1">
+              <div class="flex justify-between items-center font-semibold text-slate-800">
+                <span>📅 ${ev.nombre}</span>
+                <div class="flex items-center gap-1">
+                  <span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full mr-1">${ev.fecha} ${ev.hora ? '• ' + ev.hora : ''}</span>
+                  <button onclick="editarEventoMinisterio(${m.id}, ${ev.id})" class="text-slate-400 hover:text-blue-600 p-0.5" title="Editar Evento"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                  <button onclick="eliminarEventoMinisterio(${m.id}, ${ev.id})" class="text-slate-400 hover:text-red-600 p-0.5" title="Eliminar Evento"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-500 font-medium">Servidores: ${ev.servidores && ev.servidores.length > 0 ? ev.servidores.join(', ') : 'Sin asignar'}</p>
+            </div>
+          `).join('');
+        } else {
+          eventosHTML = `<p class="text-xs text-slate-400 italic">No hay eventos programados</p>`;
+        }
+
+        const cantidadIntegrantes = m.miembros ? m.miembros.length : 0;
+
+        card.innerHTML = `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="hand-heart" class="w-5 h-5"></i></div>
+              <div class="flex items-center gap-1">
+                <button onclick="abrirModalCrearMinisterio(${m.id})" title="Editar Ministerio & Miembros" class="text-slate-400 hover:text-blue-600 p-1 transition"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                <button onclick="eliminarMinisterio(${m.id})" title="Eliminar Ministerio" class="text-slate-400 hover:text-red-600 p-1 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </div>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-lg">${m.nombre}</h3>
+              <p class="text-xs text-slate-500 mt-1"><span class="font-semibold text-slate-700">Líder:</span> ${m.lider}</p>
+              <p class="text-[11px] text-blue-600 font-medium mt-0.5">${cantidadIntegrantes} Integrante(s) asignado(s)</p>
+            </div>
+            <div class="pt-2 border-t border-slate-100 space-y-2">
+              <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Próximos Eventos / Servicios</p>
+              <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                ${eventosHTML}
+              </div>
+            </div>
+          </div>
+          <div class="pt-3 border-t border-slate-100">
+            <button onclick="abrirModalEventoMinisterio(${m.id})" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5">
+              <i data-lucide="calendar-plus" class="w-4 h-4 text-blue-600"></i> Agendar Evento / Servidores
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    function abrirModalCrearMinisterio(minId = null) {
+      ministerioEditandoId = minId;
+      const minExistente = minId ? ministerios.find(m => m.id === minId) : null;
+
+      document.getElementById('titulo-modal-ministerio').innerText = minExistente ? "Editar Ministerio" : "Crear Nuevo Ministerio";
+
+      const selectLider = document.getElementById('select-lider-min');
+      selectLider.innerHTML = '<option value="Sin asignar">Sin asignar</option>';
+
+      const contCheck = document.getElementById('contenedor-check-miembros-min');
+      contCheck.innerHTML = '';
+
+      if (minExistente) {
+        document.getElementById('input-nombre-min').value = minExistente.nombre || '';
+      } else {
+        document.getElementById('input-nombre-min').value = '';
+      }
+
+      if(miembros.length === 0) {
+        contCheck.innerHTML = `<p class="text-xs text-slate-400 italic">No hay miembros registrados en la plataforma.</p>`;
+      } else {
+        miembros.forEach(m => {
+          const nombreComp = `${m.nombre} ${m.apellido}`;
+          
+          const isLiderSelected = minExistente && minExistente.lider === nombreComp ? 'selected' : '';
+          selectLider.innerHTML += `<option value="${nombreComp}" ${isLiderSelected}>${nombreComp}</option>`;
+
+          const isChecked = minExistente && minExistente.miembros && minExistente.miembros.includes(nombreComp) ? 'checked' : '';
+
+          contCheck.innerHTML += `
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:bg-slate-100 p-1 rounded-lg transition">
+              <input type="checkbox" name="miembros-min-check" value="${nombreComp}" ${isChecked} class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+              <span>${nombreComp} (${m.grupo || 'Sin grupo'})</span>
+            </label>
+          `;
+        });
+      }
+
+      document.getElementById('modal-crear-ministerio').classList.remove('hidden');
+    }
+
+    function cerrarModalCrearMinisterio() {
+      document.getElementById('modal-crear-ministerio').classList.add('hidden');
+      document.getElementById('input-nombre-min').value = '';
+      ministerioEditandoId = null;
+    }
+
+    function guardarNuevoMinisterio() {
+      const nombre = document.getElementById('input-nombre-min').value.trim();
+      const lider = document.getElementById('select-lider-min').value || "Sin asignar";
+
+      if(!nombre) {
+        alert("Por favor ingresa un nombre para el ministerio.");
+        return;
+      }
+
+      const checkedBoxes = document.querySelectorAll('input[name="miembros-min-check"]:checked');
+      const miembrosMinisterio = Array.from(checkedBoxes).map(cb => cb.value);
+
+      if (ministerioEditandoId) {
+        const min = ministerios.find(m => m.id === ministerioEditandoId);
+        if(min) {
+          min.nombre = nombre;
+          min.lider = lider;
+          min.miembros = miembrosMinisterio;
+        }
+      } else {
+        const nuevo = {
+          id: Date.now(),
+          nombre: nombre,
+          lider: lider,
+          miembros: miembrosMinisterio,
+          eventos: []
+        };
+        ministerios.push(nuevo);
+      }
+
+      guardarMemoria();
+      cerrarModalCrearMinisterio();
+    }
+
+    function eliminarMinisterio(id) {
+      if(confirm("¿Seguro que deseas eliminar este ministerio?")) {
+        ministerios = ministerios.filter(m => m.id !== id);
+        guardarMemoria();
+      }
+    }
+
+    function abrirModalEventoMinisterio(minId, evId = null) {
+      minSeleccionadoId = minId;
+      eventoEditandoId = evId;
+
+      const min = ministerios.find(m => m.id === minId);
+      if(!min) return;
+
+      document.getElementById('titulo-modal-evento-min').innerText = evId ? `Editar Servicio / Evento` : `Agendar Servicio / Evento`;
+      document.getElementById('subtitulo-modal-evento-min').innerText = `Ministerio: ${min.nombre}`;
+
+      const contCheck = document.getElementById('contenedor-check-servidores');
+      contCheck.innerHTML = '';
+
+      let evExistente = evId && min.eventos ? min.eventos.find(e => e.id === evId) : null;
+
+      if(evExistente) {
+        document.getElementById('input-evento-min-nombre').value = evExistente.nombre || '';
+        document.getElementById('input-evento-min-fecha').value = evExistente.fecha || '';
+        document.getElementById('input-evento-min-hora').value = evExistente.hora || '';
+      } else {
+        document.getElementById('form-evento-ministerio').reset();
+      }
+
+      // SOLAMENTE SE MUESTRAN LOS MIEMBROS INTEGRANTES DE ESTE MINISTERIO
+      const integrantesMinisterio = min.miembros || [];
+
+      if(integrantesMinisterio.length === 0) {
+        contCheck.innerHTML = `<p class="text-xs text-slate-400 italic">Este ministerio aún no tiene miembros asignados. Agrégalos editando el ministerio.</p>`;
+      } else {
+        integrantesMinisterio.forEach(nombreComp => {
+          const datosMiembro = miembros.find(m => `${m.nombre} ${m.apellido}` === nombreComp);
+          const grupoTxt = datosMiembro ? datosMiembro.grupo : 'Sin grupo';
+          const isChecked = evExistente && evExistente.servidores && evExistente.servidores.includes(nombreComp) ? 'checked' : '';
+
+          contCheck.innerHTML += `
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:bg-slate-100 p-1 rounded-lg transition">
+              <input type="checkbox" name="servidores-check" value="${nombreComp}" ${isChecked} class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+              <span>${nombreComp} (${grupoTxt})</span>
+            </label>
+          `;
+        });
+      }
+
+      document.getElementById('modal-evento-ministerio').classList.remove('hidden');
+    }
+
+    function editarEventoMinisterio(minId, evId) {
+      abrirModalEventoMinisterio(minId, evId);
+    }
+
+    function eliminarEventoMinisterio(minId, evId) {
+      if(confirm('¿Deseas eliminar este evento/servicio?')) {
+        const min = ministerios.find(m => m.id === minId);
+        if(min && min.eventos) {
+          min.eventos = min.eventos.filter(e => e.id !== evId);
+          guardarMemoria();
+        }
+      }
+    }
+
+    function cerrarModalEventoMinisterio() {
+      document.getElementById('modal-evento-ministerio').classList.add('hidden');
+      document.getElementById('form-evento-ministerio').reset();
+      minSeleccionadoId = null;
+      eventoEditandoId = null;
+    }
+
+    function guardarEventoMinisterio(e) {
+      e.preventDefault();
+      if(!minSeleccionadoId) return;
+
+      const nombre = document.getElementById('input-evento-min-nombre').value.trim();
+      const fecha = document.getElementById('input-evento-min-fecha').value;
+      const hora = document.getElementById('input-evento-min-hora').value;
+
+      const checkedBoxes = document.querySelectorAll('input[name="servidores-check"]:checked');
+      const servidores = Array.from(checkedBoxes).map(cb => cb.value);
+
+      const min = ministerios.find(m => m.id === minSeleccionadoId);
+      if(min) {
+        if(!min.eventos) min.eventos = [];
+
+        if(eventoEditandoId) {
+          // Edición
+          const ev = min.eventos.find(e => e.id === eventoEditandoId);
+          if(ev) {
+            ev.nombre = nombre;
+            ev.fecha = fecha;
+            ev.hora = hora;
+            ev.servidores = servidores;
+          }
+        } else {
+          // Nuevo
+          min.eventos.unshift({
+            id: Date.now(),
+            nombre,
+            fecha,
+            hora,
+            servidores
+          });
+        }
+        guardarMemoria();
+        cerrarModalEventoMinisterio();
+      }
+    }
+
+    function mostrarModalCrearGrupo() {
+      document.getElementById('modal-crear-grupo').classList.remove('hidden');
+    }
+
+    function cerrarModalCrearGrupo() {
+      document.getElementById('modal-crear-grupo').classList.add('hidden');
+      document.getElementById('input-nombre-grupo-nuevo').value = '';
+    }
+
+    function guardarGrupoNuevo() {
+      const nombre = document.getElementById('input-nombre-grupo-nuevo').value.trim();
+      if (nombre && !grupos.includes(nombre)) {
+        grupos.push(nombre);
+        guardarMemoria();
+        cerrarModalCrearGrupo();
+      }
+    }
+
+    function eliminarGrupo(index) {
+      const grupoAEliminar = grupos[index];
+      if(confirm(`¿Deseas eliminar el grupo "${grupoAEliminar}"? Los miembros pasarán a "Sin grupo".`)) {
+        grupos.splice(index, 1);
+        miembros.forEach(m => {
+          if (m.grupo === grupoAEliminar) m.grupo = "Sin grupo";
+        });
+        guardarMemoria();
+      }
+    }
+
+    /* ============ MENÚ LATERAL EN CELULAR (SE DESPLIEGA / OCULTA) ============ */
+
+    function abrirSidebarMobile() {
+      document.getElementById('sidebar').classList.remove('-translate-x-full');
+      document.getElementById('sidebar-backdrop').classList.remove('hidden');
+    }
+
+    function cerrarSidebarMobile() {
+      document.getElementById('sidebar').classList.add('-translate-x-full');
+      document.getElementById('sidebar-backdrop').classList.add('hidden');
+    }
+
+    function switchTab(tabName) {
+      if (usuarioActivo) {
+        const permitidos = NAV_POR_ROL[usuarioActivo.rol] || [];
+        if (!permitidos.includes(tabName)) return;
+      }
+
+      cerrarSidebarMobile();
+
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      
+      const targetNav = document.getElementById(`nav-${tabName}`);
+      const permitidosNav = usuarioActivo ? (NAV_POR_ROL[usuarioActivo.rol] || []) : null;
+      document.querySelectorAll('#main-nav button').forEach(btn => {
+        const tab = btn.id.replace('nav-', '');
+        const oculto = permitidosNav && !permitidosNav.includes(tab);
+        btn.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition" + (oculto ? " hidden" : "");
+      });
+
+      if (targetNav) {
+        targetNav.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-blue-600 text-white font-medium text-sm transition";
+      }
+
+      if (tabName === 'dashboard') {
+        document.getElementById('view-dashboard').classList.remove('hidden');
+        document.getElementById('page-title').innerText = 'Panel de Control';
+        document.getElementById('page-subtitle').innerText = 'Resumen general de tu iglesia';
+      } else if (tabName === 'miembros') {
+        document.getElementById('view-miembros').classList.remove('hidden');
+        document.getElementById('page-title').innerText = 'Miembros';
+        document.getElementById('page-subtitle').innerText = 'Gestiona los miembros de tu iglesia';
+      } else if (tabName === 'lideres') {
+        document.getElementById('view-lideres').classList.remove('hidden');
+        document.getElementById('page-title').innerText = 'Líderes';
+        document.getElementById('page-subtitle').innerText = 'Cuentas aprobadas con rol de Líder';
+        renderLideres();
+      } else if (tabName === 'asistencia') {
+        document.getElementById('view-asistencia').classList.remove('hidden');
+        document.getElementById('page-title').innerText = 'Asistencia';
+        document.getElementById('page-subtitle').innerText = 'Registra la asistencia semanal de tu grupo o ministerio';
+        renderAsistencia();
+      } else if (tabName === 'grupos') {
+        document.getElementById('view-grupos').classList.remove('hidden');
+        document.getElementById('page-title').innerText = 'Grupos Pequeños';
+        document.getElementById('page-subtitle').innerText = 'Gestión integral de células y grupos';
+        renderTarjetasGrupos();
+      } else if (tabName === 'ministerios') {
+        document.getElementById('view-ministerios').classList.remove('hidden');
+        document.getElementById('page-title').innerText = 'Ministerios';
+        document.getElementById('page-subtitle').innerText = 'Gestión de equipos, líderes y servidores';
+        renderMinisterios();
+      } else if (tabName === 'consolidacion') {
+        document.getElementById('view-consolidacion').classList.remove('hidden');
+        document.getElementById('page-title').innerText = 'Consolidación';
+        document.getElementById('page-subtitle').innerText = 'Seguimiento de nuevos visitantes por etapas y respuestas';
+        renderConsolidacion();
+      } else if (tabName === 'eventos') {
+        document.getElementById('view-eventos').classList.remove('hidden');
+        document.getElementById('page-title').innerText = 'Eventos';
+        document.getElementById('page-subtitle').innerText = 'Calendario de eventos especiales de la iglesia';
+        renderCalendarioEventos();
+      } else if (tabName === 'comunicaciones') {
+        document.getElementById('view-comunicaciones').classList.remove('hidden');
+        document.getElementById('page-title').innerText = 'Comunicación';
+        document.getElementById('page-subtitle').innerText = 'Canales de mensajería y asistente de difusión';
+        generarMensajeAsistente();
+      } else {
+        const viewEl = document.getElementById(`view-${tabName}`);
+        if(viewEl) viewEl.classList.remove('hidden');
+        document.getElementById('page-title').innerText = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+        document.getElementById('page-subtitle').innerText = 'Módulo activo';
+      }
+    }
+
+    function mostrarFormularioNuevo() {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('view-nuevo-miembro').classList.remove('hidden');
+      document.getElementById('page-title').innerText = 'Nuevo Miembro';
+      document.getElementById('page-subtitle').innerText = 'Agrega un nuevo miembro a tu iglesia';
+    }
+
+    function ocultarFormularioNuevo() { switchTab('miembros'); }
+
+    function guardarNuevoMiembro(event) {
+      event.preventDefault();
+      
+      const nuevo = {
+        nombre: document.getElementById('input-nombre').value,
+        apellido: document.getElementById('input-apellido').value,
+        sexo: document.getElementById('input-sexo').value,
+        nacimiento: document.getElementById('input-nacimiento').value,
+        categoriaEdad: document.getElementById('input-categoria-edad').value || 'Adultos',
+        barrio: document.getElementById('input-barrio').value || '-',
+        telefono: document.getElementById('input-telefono').value || '-',
+        email: document.getElementById('input-email').value || '-',
+        direccion: document.getElementById('input-direccion').value || '-',
+        ingreso: document.getElementById('input-ingreso').value,
+        bautizado: document.getElementById('input-bautizado').value || 'No',
+        grupo: document.getElementById('input-grupo-form').value,
+        foto: tempFoto
+      };
+
+      miembros.unshift(nuevo);
+      guardarMemoria();
+
+      document.getElementById('form-nuevo-miembro').reset();
+      tempFoto = null;
+      document.getElementById('avatar-preview').innerHTML = `<i data-lucide="user" class="w-10 h-10"></i>`;
+      lucide.createIcons();
+
+      switchTab('miembros');
+      alert(`¡${nuevo.nombre} ${nuevo.apellido} guardado exitosamente!`);
+    }
+
+    function renderTabla() {
+      const tbody = document.getElementById('tabla-miembros-body');
+      if(!tbody) return;
+      tbody.innerHTML = '';
+
+      getMiembrosVisibles().forEach((m) => {
+        const idx = miembros.indexOf(m);
+        const iniciales = (m.nombre[0] + (m.apellido[0] || '')).toUpperCase();
+        const avatarHTML = m.foto 
+          ? `<img src="${m.foto}" class="w-8 h-8 rounded-full object-cover">`
+          : `<div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">${iniciales}</div>`;
+
+        const row = document.createElement('tr');
+        row.className = "hover:bg-slate-50/80 transition";
+        row.dataset.edad = m.categoriaEdad;
+        row.dataset.grupo = m.grupo;
+
+        row.innerHTML = `
+          <td class="py-3.5 px-4 font-medium text-slate-800 flex items-center gap-3">
+            ${avatarHTML}
+            <div>
+              <p class="font-bold text-slate-800">${m.nombre} ${m.apellido}</p>
+              <p class="text-[11px] text-slate-400">${m.email} • ${m.telefono}</p>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 text-slate-600 text-xs font-medium">${m.categoriaEdad} (${m.sexo})</td>
+          <td class="py-3.5 px-4 text-slate-500 text-xs">${m.barrio}</td>
+          <td class="py-3.5 px-4 text-slate-500 text-xs">${m.ingreso}</td>
+          <td class="py-3.5 px-4 text-slate-500 text-xs font-medium">
+            <select onchange="cambiarBautizadoMiembro(${idx}, this.value)" class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-1 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <option value="No" ${(m.bautizado === 'No' || !m.bautizado) ? 'selected' : ''}>No</option>
+              <option value="Sí" ${m.bautizado === 'Sí' ? 'selected' : ''}>Sí</option>
+            </select>
+          </td>
+          <td class="py-3.5 px-4 text-slate-500 text-xs font-medium">
+            <select onchange="cambiarGrupoMiembro(${idx}, this.value)" class="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <option value="Sin grupo" ${m.grupo === 'Sin grupo' ? 'selected' : ''}>Sin grupo</option>
+              ${grupos.map(g => `<option value="${g}" ${m.grupo === g ? 'selected' : ''}>${g}</option>`).join('')}
+            </select>
+          </td>
+          <td class="py-3.5 px-4"><span class="bg-emerald-50 text-emerald-600 font-medium px-2.5 py-1 rounded-full text-xs">● Activo</span></td>
+          <td class="py-3.5 px-4 text-slate-400 hover:text-red-600 cursor-pointer" onclick="eliminarMiembro(${idx})" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></td>
+        `;
+        tbody.appendChild(row);
+      });
+      lucide.createIcons();
+    }
+
+    function cambiarBautizadoMiembro(idx, valor) {
+      miembros[idx].bautizado = valor;
+      guardarMemoria();
+    }
+
+    function cambiarGrupoMiembro(idx, nuevoGrupo) {
+      miembros[idx].grupo = nuevoGrupo;
+      guardarMemoria();
+    }
+
+    function eliminarMiembro(idx) {
+      if (confirm(`¿Seguro que deseas eliminar a ${miembros[idx].nombre}?`)) {
+        miembros.splice(idx, 1);
+        guardarMemoria();
+      }
+    }
+
+    function filtrarMiembros() {
+      const q = document.getElementById('input-buscar-miembro').value.toLowerCase();
+      const catEdad = document.getElementById('select-filtro-edad').value;
+      const gSel = document.getElementById('select-filtro-grupo').value;
+
+      const rows = document.querySelectorAll('#tabla-miembros-body tr');
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        const rowEdad = row.dataset.edad || '';
+        const rowGrupo = row.dataset.grupo || '';
+
+        const matchQ = text.includes(q);
+        const matchEdad = catEdad === '' || rowEdad.includes(catEdad);
+        const matchGrupo = gSel === '' || rowGrupo === gSel;
+
+        row.style.display = (matchQ && matchEdad && matchGrupo) ? '' : 'none';
+      });
+    }
+
+    // Genera 6 etiquetas semanales (la última es siempre "hoy") junto con las fechas de corte de cada semana
+    function getEtiquetasSemanales(n) {
+      const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const etiquetas = [];
+      const fechas = [];
+      const hoy = new Date();
+      for (let i = n - 1; i >= 0; i--) {
+        const d = new Date(hoy);
+        d.setDate(d.getDate() - i * 7);
+        fechas.push(d);
+        etiquetas.push(`${d.getDate()} ${meses[d.getMonth()]}`);
+      }
+      return { etiquetas, fechas };
+    }
+
+    // Total acumulado de miembros registrados hasta cada fecha de corte (el último punto = total actual real)
+    function getDatosCrecimientoMiembros(fechas) {
+      return fechas.map(fecha => {
+        const limite = fecha.toISOString().split('T')[0];
+        return miembros.filter(m => m.ingreso && m.ingreso <= limite).length;
+      });
+    }
+
+    // Prospectos nuevos registrados dentro de cada semana (no acumulado)
+    function getDatosProspectosPorSemana(fechas) {
+      return fechas.map(fechaFin => {
+        const fechaInicio = new Date(fechaFin);
+        fechaInicio.setDate(fechaInicio.getDate() - 6);
+        const inicioStr = fechaInicio.toISOString().split('T')[0];
+        const finStr = fechaFin.toISOString().split('T')[0];
+        return prospectos.filter(p => p.fecha && p.fecha >= inicioStr && p.fecha <= finStr).length;
+      });
+    }
+
+    let chartsCreados = false;
+    let chartMiembrosInstance = null;
+    let chartAsistenciaInstance = null;
+    let chartProspectosInstance = null;
+    let chartProyeccionInstance = null;
+
+    function crearGraficos() {
+      if (chartsCreados) {
+        actualizarGraficos();
+        return;
+      }
+      chartsCreados = true;
+
+      const config = (color, data) => ({
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            data: data,
+            borderColor: color,
+            backgroundColor: color + '10',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, grid: { borderDash: [4, 4] } }, x: { grid: { display: false } } }
+        }
+      });
+
+      chartMiembrosInstance = new Chart(document.getElementById('chartMiembros').getContext('2d'), config('#2563eb', []));
+      chartAsistenciaInstance = new Chart(document.getElementById('chartAsistencia').getContext('2d'), config('#f59e0b', []));
+      chartProspectosInstance = new Chart(document.getElementById('chartProspectos').getContext('2d'), config('#a855f7', []));
+
+      chartProyeccionInstance = new Chart(document.getElementById('chartProyeccion').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            { label: 'Real', data: [], borderColor: '#6366f1', backgroundColor: '#6366f110', borderWidth: 2, tension: 0.3, fill: true },
+            { label: 'Proyección', data: [], borderColor: '#6366f1', borderDash: [6, 4], borderWidth: 2, backgroundColor: 'transparent', fill: false, pointBackgroundColor: '#6366f1' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+          scales: { y: { beginAtZero: true, grid: { borderDash: [4, 4] } }, x: { grid: { display: false } } }
+        }
+      });
+
+      actualizarGraficos();
+    }
+
+    function actualizarGraficos() {
+      if (!chartsCreados) return;
+      const { etiquetas, fechas } = getEtiquetasSemanales(6);
+      const datosMiembros = getDatosCrecimientoMiembros(fechas);
+      const datosProspectos = getDatosProspectosPorSemana(fechas);
+
+      if (chartMiembrosInstance) {
+        chartMiembrosInstance.data.labels = etiquetas;
+        chartMiembrosInstance.data.datasets[0].data = datosMiembros;
+        chartMiembrosInstance.update();
+      }
+      if (chartAsistenciaInstance) {
+        chartAsistenciaInstance.data.labels = etiquetas;
+        chartAsistenciaInstance.data.datasets[0].data = etiquetas.map(() => 0);
+        chartAsistenciaInstance.update();
+      }
+      if (chartProspectosInstance) {
+        chartProspectosInstance.data.labels = etiquetas;
+        chartProspectosInstance.data.datasets[0].data = datosProspectos;
+        chartProspectosInstance.update();
+      }
+      if (chartProyeccionInstance) {
+        const proyeccion = calcularProyeccionProspectos();
+        const ultimoReal = datosProspectos[datosProspectos.length - 1] || 0;
+        chartProyeccionInstance.data.labels = [...etiquetas, 'Próxima semana'];
+        chartProyeccionInstance.data.datasets[0].data = [...datosProspectos, null];
+        chartProyeccionInstance.data.datasets[1].data = [
+          ...datosProspectos.map(() => null).slice(0, -1),
+          ultimoReal,
+          proyeccion
+        ];
+        chartProyeccionInstance.update();
+      }
+    }
+
+    /* ============ AUTENTICACIÓN: LOGIN / REGISTRO / RECUPERAR CONTRASEÑA ============ */
+
+    function mostrarVistaAuth(vista) {
+      ['login', 'registro', 'olvide', 'pendiente', 'verificar'].forEach(v => {
+        document.getElementById(`auth-view-${v}`).classList.add('hidden');
+      });
+      document.getElementById(`auth-view-${vista}`).classList.remove('hidden');
+
+      ['login-error', 'registro-error', 'olvide-error', 'olvide-exito', 'verificar-error'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.add('hidden'); el.innerText = ''; }
+      });
+    }
+
+    function mostrarErrorAuth(el, msg) {
+      el.innerText = msg;
+      el.classList.remove('hidden');
+    }
+
+    /* ---- Seguridad: hash de contraseñas (nunca se guardan en texto plano) ---- */
+    async function hashTexto(texto) {
+      const datos = new TextEncoder().encode(texto);
+      const buffer = await crypto.subtle.digest('SHA-256', datos);
+      return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function generarCodigoVerificacion() {
+      return String(Math.floor(100000 + Math.random() * 900000));
+    }
+
+    /* ---- Seguridad: freno a intentos repetidos de contraseña (fuerza bruta casera) ---- */
+    const MAX_INTENTOS_LOGIN = 5;
+    const BLOQUEO_LOGIN_MS = 5 * 60 * 1000; // 5 minutos
+    const EXPIRACION_SESION_MS = 12 * 60 * 60 * 1000; // 12 horas
+
+    function guardarIntentosLogin() {
+      localStorage.setItem('miiglesia_intentos_login', JSON.stringify(intentosLogin));
+    }
+
+    function estaLoginBloqueado(email) {
+      const registro = intentosLogin[email];
+      return !!registro && registro.bloqueadoHasta > Date.now();
+    }
+
+    function minutosDeBloqueoRestantes(email) {
+      const registro = intentosLogin[email];
+      if (!registro) return 0;
+      return Math.max(1, Math.ceil((registro.bloqueadoHasta - Date.now()) / 60000));
+    }
+
+    function registrarIntentoFallido(email) {
+      const registro = intentosLogin[email] || { intentos: 0, bloqueadoHasta: 0 };
+      registro.intentos += 1;
+      if (registro.intentos >= MAX_INTENTOS_LOGIN) {
+        registro.bloqueadoHasta = Date.now() + BLOQUEO_LOGIN_MS;
+        registro.intentos = 0;
+      }
+      intentosLogin[email] = registro;
+      guardarIntentosLogin();
+    }
+
+    function limpiarIntentosLogin(email) {
+      delete intentosLogin[email];
+      guardarIntentosLogin();
+    }
+
+    function guardarSesionActiva(user) {
+      localStorage.setItem('miiglesia_usuario_activo', JSON.stringify({ email: user.email, expira: Date.now() + EXPIRACION_SESION_MS }));
+    }
+
+    async function iniciarSesion(event) {
+      event.preventDefault();
+      const email = document.getElementById('login-email').value.trim().toLowerCase();
+      const pass = document.getElementById('login-password').value;
+      const errorEl = document.getElementById('login-error');
+
+      if (estaLoginBloqueado(email)) {
+        mostrarErrorAuth(errorEl, `Demasiados intentos fallidos. Probá de nuevo en ${minutosDeBloqueoRestantes(email)} minuto(s).`);
+        return;
+      }
+
+      const user = usuarios.find(u => u.email.toLowerCase() === email);
+
+      if (!user) {
+        mostrarErrorAuth(errorEl, 'No existe una cuenta con ese correo. Podés crear una cuenta nueva.');
+        return;
+      }
+      if (user.estado === 'pendiente') {
+        mostrarErrorAuth(errorEl, 'Tu cuenta todavía está pendiente de aprobación por el administrador.');
+        return;
+      }
+      if (user.estado === 'rechazado') {
+        mostrarErrorAuth(errorEl, 'Tu solicitud de acceso fue rechazada. Contactá al administrador.');
+        return;
+      }
+      if (user.authGoogle && !user.passHash) {
+        mostrarErrorAuth(errorEl, 'Esta cuenta usa Google para iniciar sesión. Usá el botón "Continuar con Google".');
+        return;
+      }
+
+      // Migración de cuentas viejas que todavía tenían la contraseña en texto plano
+      if (!user.passHash && user.pass) {
+        if (user.pass !== pass) {
+          registrarIntentoFallido(email);
+          mostrarErrorAuth(errorEl, 'Contraseña incorrecta.');
+          return;
+        }
+        user.passHash = await hashTexto(pass);
+        delete user.pass;
+      } else {
+        const passIngresadoHash = await hashTexto(pass);
+        if (user.passHash !== passIngresadoHash) {
+          registrarIntentoFallido(email);
+          mostrarErrorAuth(errorEl, 'Contraseña incorrecta.');
+          return;
+        }
+      }
+
+      limpiarIntentosLogin(email);
+      usuarioActivo = user;
+      guardarSesionActiva(user);
+      guardarMemoria();
+      document.getElementById('login-email').value = '';
+      document.getElementById('login-password').value = '';
+      iniciarAplicacion();
+    }
+
+    /* ---- Registro en dos pasos: 1) verificar que el correo es real, 2) recién ahí se crea la solicitud ---- */
+    function iniciarVerificacionCorreo(event) {
+      event.preventDefault();
+      const nombre = document.getElementById('registro-nombre').value.trim();
+      const email = document.getElementById('registro-email').value.trim().toLowerCase();
+      const pass = document.getElementById('registro-password').value;
+      const errorEl = document.getElementById('registro-error');
+
+      if (usuarios.some(u => u.email.toLowerCase() === email)) {
+        mostrarErrorAuth(errorEl, 'Ya existe una cuenta registrada con ese correo.');
+        return;
+      }
+
+      const btn = document.getElementById('btn-enviar-verificacion');
+      btn.disabled = true;
+      btn.innerText = 'Enviando código...';
+
+      hashTexto(pass).then(passHash => {
+        registroPendienteVerificacion = {
+          nombre, email, passHash,
+          codigo: generarCodigoVerificacion(),
+          expira: Date.now() + 10 * 60 * 1000 // 10 minutos
+        };
+
+        enviarCodigoPorCorreo();
+
+        document.getElementById('verificar-subtitulo').innerText = `Te enviamos un código de 6 dígitos a ${email}`;
+        document.getElementById('verificar-codigo').value = '';
+        mostrarVistaAuth('verificar');
+      }).finally(() => {
+        btn.disabled = false;
+        btn.innerText = 'Enviar código de verificación';
+      });
+    }
+
+    function enviarCodigoPorCorreo() {
+      if (!registroPendienteVerificacion) return;
+      const { nombre, email, codigo } = registroPendienteVerificacion;
+
+      if (typeof emailjs !== 'undefined') {
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email: email,
+          to_name: nombre,
+          message: `Tu código de verificación es: ${codigo}. Vence en 10 minutos.`,
+          temp_password: codigo
+        }).catch(() => {});
+      }
+    }
+
+    function reenviarCodigoVerificacion() {
+      if (!registroPendienteVerificacion) { mostrarVistaAuth('registro'); return; }
+      registroPendienteVerificacion.codigo = generarCodigoVerificacion();
+      registroPendienteVerificacion.expira = Date.now() + 10 * 60 * 1000;
+      enviarCodigoPorCorreo();
+      alert('Te reenviamos el código a tu correo.');
+    }
+
+    function confirmarCodigoVerificacion(event) {
+      event.preventDefault();
+      const errorEl = document.getElementById('verificar-error');
+      const codigoIngresado = document.getElementById('verificar-codigo').value.trim();
+
+      if (!registroPendienteVerificacion) {
+        mostrarErrorAuth(errorEl, 'Tu sesión de verificación expiró. Empezá de nuevo.');
+        mostrarVistaAuth('registro');
+        return;
+      }
+      if (Date.now() > registroPendienteVerificacion.expira) {
+        mostrarErrorAuth(errorEl, 'El código venció. Pedí uno nuevo.');
+        return;
+      }
+      if (codigoIngresado !== registroPendienteVerificacion.codigo) {
+        mostrarErrorAuth(errorEl, 'El código no coincide. Revisá tu correo e intentá de nuevo.');
+        return;
+      }
+
+      const { nombre, email, passHash } = registroPendienteVerificacion;
+      usuarios.push({ nombre, email, passHash, estado: 'pendiente', rol: null, correoVerificado: true, liderGrupos: [], liderMinisterios: [] });
+      guardarMemoria();
+
+      if (typeof emailjs !== 'undefined') {
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email: HOST_EMAIL,
+          to_name: 'Administrador',
+          message: `${nombre} (${email}) verificó su correo y solicitó acceso a la plataforma. Ingresá a "Solicitudes pendientes" para aprobar o rechazar.`
+        }).catch(() => {});
+      }
+
+      registroPendienteVerificacion = null;
+      document.getElementById('registro-nombre').value = '';
+      document.getElementById('registro-email').value = '';
+      document.getElementById('registro-password').value = '';
+      mostrarVistaAuth('pendiente');
+    }
+
+    async function enviarRecuperacion(event) {
+      event.preventDefault();
+      const email = document.getElementById('olvide-email').value.trim().toLowerCase();
+      const errorEl = document.getElementById('olvide-error');
+      const exitoEl = document.getElementById('olvide-exito');
+      errorEl.classList.add('hidden');
+      exitoEl.classList.add('hidden');
+
+      const user = usuarios.find(u => u.email.toLowerCase() === email);
+      if (!user) {
+        mostrarErrorAuth(errorEl, 'No existe una cuenta con ese correo.');
+        return;
+      }
+      if (user.authGoogle && !user.passHash) {
+        mostrarErrorAuth(errorEl, 'Esta cuenta usa Google para iniciar sesión, no tiene contraseña que recuperar.');
+        return;
+      }
+
+      const tempPass = Math.random().toString(36).slice(-8);
+      user.passHash = await hashTexto(tempPass);
+      guardarMemoria();
+
+      if (typeof emailjs !== 'undefined') {
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email: user.email,
+          to_name: user.nombre,
+          message: `Tu nueva contraseña temporal es: ${tempPass}. Te recomendamos iniciar sesión y cambiarla cuanto antes.`,
+          temp_password: tempPass
+        }).then(() => {
+          exitoEl.innerText = 'Te enviamos un correo con tu contraseña temporal.';
+          exitoEl.classList.remove('hidden');
+        }).catch(() => {
+          exitoEl.innerText = `No pudimos enviar el correo. Tu contraseña temporal es: ${tempPass}`;
+          exitoEl.classList.remove('hidden');
+        });
+      } else {
+        exitoEl.innerText = `Tu contraseña temporal es: ${tempPass}`;
+        exitoEl.classList.remove('hidden');
+      }
+
+      document.getElementById('olvide-email').value = '';
+    }
+
+    /* ---- Iniciar sesión / registrarse con Google (identidad ya verificada por Google) ---- */
+    function decodificarJWT(token) {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+      );
+      return JSON.parse(jsonPayload);
+    }
+
+    function manejarRespuestaGoogle(response) {
+      const datos = decodificarJWT(response.credential);
+      if (!datos.email_verified) {
+        alert('Tu cuenta de Google no tiene el correo verificado.');
+        return;
+      }
+
+      const email = datos.email.toLowerCase();
+      const existente = usuarios.find(u => u.email.toLowerCase() === email);
+
+      if (existente) {
+        if (existente.estado === 'pendiente') {
+          mostrarVistaAuth('pendiente');
+          return;
+        }
+        if (existente.estado === 'rechazado') {
+          alert('Tu solicitud de acceso fue rechazada. Contactá al administrador.');
+          return;
+        }
+        usuarioActivo = existente;
+        guardarSesionActiva(existente);
+        guardarMemoria();
+        iniciarAplicacion();
+        return;
+      }
+
+      usuarios.push({
+        nombre: datos.name || datos.email,
+        email: datos.email,
+        passHash: null,
+        authGoogle: true,
+        estado: 'pendiente',
+        rol: null,
+        correoVerificado: true,
+        liderGrupos: [],
+        liderMinisterios: []
+      });
+      guardarMemoria();
+
+      if (typeof emailjs !== 'undefined') {
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email: HOST_EMAIL,
+          to_name: 'Administrador',
+          message: `${datos.name || datos.email} (${datos.email}) solicitó acceso con su cuenta de Google. Ingresá a "Solicitudes pendientes" para aprobar o rechazar.`
+        }).catch(() => {});
+      }
+
+      mostrarVistaAuth('pendiente');
+    }
+
+    function inicializarGoogleSignIn() {
+      if (GOOGLE_CLIENT_ID.startsWith('TU_GOOGLE_CLIENT_ID')) return; // todavía no configuraron su Client ID real
+      if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) return;
+
+      google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: manejarRespuestaGoogle });
+
+      const contLogin = document.getElementById('google-signin-login');
+      const contRegistro = document.getElementById('google-signin-registro');
+      if (contLogin) google.accounts.id.renderButton(contLogin, { theme: 'outline', size: 'large', width: 320, text: 'continue_with' });
+      if (contRegistro) google.accounts.id.renderButton(contRegistro, { theme: 'outline', size: 'large', width: 320, text: 'continue_with' });
+    }
+
+    function cerrarSesion() {
+      usuarioActivo = null;
+      localStorage.removeItem('miiglesia_usuario_activo');
+      document.querySelectorAll('.fixed.inset-0').forEach(modal => modal.classList.add('hidden'));
+      document.getElementById('app-screen').classList.add('hidden');
+      document.getElementById('auth-screen').classList.remove('hidden');
+      mostrarVistaAuth('login');
+    }
+
+    function chequearSesionGuardada() {
+      const guardada = JSON.parse(localStorage.getItem('miiglesia_usuario_activo') || 'null');
+      if (guardada && guardada.expira > Date.now()) {
+        const userActual = usuarios.find(u => u.email === guardada.email && u.estado === 'aprobado');
+        if (userActual) {
+          usuarioActivo = userActual;
+          iniciarAplicacion();
+          return;
+        }
+      }
+      localStorage.removeItem('miiglesia_usuario_activo');
+      mostrarVistaAuth('login');
+    }
+
+    function iniciarAplicacion() {
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+
+      aplicarPermisosPorRol();
+      actualizarInterfazUsuario();
+      renderGruposDropdowns();
+      renderTabla();
+      renderTarjetasGrupos();
+      renderMinisterios();
+      renderConsolidacion();
+      renderAsistencia();
+      renderLideres();
+      renderCalendarioEventos();
+      actualizarContadores();
+      crearGraficos();
+      registrarSnapshotDiario();
+    }
+
+    /* ============ PERMISOS POR ROL ============ */
+
+    const NAV_POR_ROL = {
+      'Anfitrión Súper Admin': ['dashboard', 'miembros', 'lideres', 'asistencia', 'consolidacion', 'grupos', 'ministerios', 'comunicaciones', 'eventos', 'cursos', 'appmovil', 'configuracion'],
+      'Líder': ['miembros', 'asistencia', 'eventos'],
+      'Consolidador': ['consolidacion', 'eventos']
+    };
+
+    function aplicarPermisosPorRol() {
+      if (!usuarioActivo) return;
+      const permitidos = NAV_POR_ROL[usuarioActivo.rol] || [];
+      const tabPorDefecto = permitidos.includes('dashboard') ? 'dashboard' : (permitidos[0] || 'dashboard');
+      switchTab(tabPorDefecto);
+    }
+
+    // Compatibilidad: cuentas de líder viejas guardaban un solo grupo/ministerio como texto.
+    // Las cuentas nuevas guardan listas, para permitir más de un grupo/ministerio por líder.
+    function getGruposDeLider(user) {
+      if (!user) return [];
+      if (Array.isArray(user.liderGrupos)) return user.liderGrupos;
+      return user.liderGrupo ? [user.liderGrupo] : [];
+    }
+
+    function getMinisteriosDeLider(user) {
+      if (!user) return [];
+      if (Array.isArray(user.liderMinisterios)) return user.liderMinisterios;
+      return user.liderMinisterio ? [user.liderMinisterio] : [];
+    }
+
+    function estaEnScopeLider(m) {
+      if (!usuarioActivo) return false;
+      if (getGruposDeLider(usuarioActivo).includes(m.grupo)) return true;
+      const nombreCompleto = `${m.nombre} ${m.apellido}`;
+      return getMinisteriosDeLider(usuarioActivo).some(nombreMin => {
+        const min = ministerios.find(x => x.nombre === nombreMin);
+        return min && min.miembros && min.miembros.includes(nombreCompleto);
+      });
+    }
+
+    function getMiembrosVisibles() {
+      if (usuarioActivo && usuarioActivo.rol === 'Líder') {
+        return miembros.filter(estaEnScopeLider);
+      }
+      return miembros;
+    }
+
+    /* ============ MÓDULO ASISTENCIA (SEMANAL, POR GRUPO O MINISTERIO) ============ */
+
+    function getMiembrosDeScope(tipo, nombre) {
+      if (!tipo || !nombre) return [];
+      if (tipo === 'grupo') {
+        return miembros.filter(m => m.grupo === nombre);
+      }
+      const min = ministerios.find(x => x.nombre === nombre);
+      if (!min) return [];
+      return miembros.filter(m => (min.miembros || []).includes(`${m.nombre} ${m.apellido}`));
+    }
+
+    function getScopesAsistenciaDisponibles() {
+      if (!usuarioActivo) return [];
+      if (usuarioActivo.rol === 'Anfitrión Súper Admin') {
+        return [
+          ...grupos.map(g => ({ tipo: 'grupo', nombre: g })),
+          ...ministerios.map(m => ({ tipo: 'ministerio', nombre: m.nombre }))
+        ];
+      }
+      if (usuarioActivo.rol === 'Líder') {
+        return [
+          ...getGruposDeLider(usuarioActivo).map(g => ({ tipo: 'grupo', nombre: g })),
+          ...getMinisteriosDeLider(usuarioActivo).map(m => ({ tipo: 'ministerio', nombre: m }))
+        ];
+      }
+      return [];
+    }
+
+    function formatearFechaAsistencia(fechaStr) {
+      if (!fechaStr) return '-';
+      const [y, m, d] = fechaStr.split('-');
+      const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return `${parseInt(d, 10)} ${meses[parseInt(m, 10) - 1]} ${y}`;
+    }
+
+    function renderAsistencia() {
+      const vista = document.getElementById('view-asistencia');
+      if (!vista || !usuarioActivo) return;
+
+      const scopes = getScopesAsistenciaDisponibles();
+      scopesAsistenciaCache = scopes;
+      const selectorCont = document.getElementById('contenedor-selector-scope-asistencia');
+      const checkCont = document.getElementById('contenedor-check-asistencia');
+      const historialBody = document.getElementById('tabla-historial-asistencia-body');
+
+      if (scopes.length === 0) {
+        selectorCont.innerHTML = '';
+        checkCont.innerHTML = `<p class="text-xs text-slate-400 italic">Todavía no tenés un grupo pequeño o ministerio asignado.</p>`;
+        historialBody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-400 text-xs">Sin datos.</td></tr>`;
+        document.getElementById('asistencia-scope-info').innerText = '';
+        return;
+      }
+
+      if (!scopeAsistenciaActual || !scopes.some(s => s.tipo === scopeAsistenciaActual.tipo && s.nombre === scopeAsistenciaActual.nombre)) {
+        scopeAsistenciaActual = scopes[0];
+      }
+
+      if (scopes.length > 1) {
+        selectorCont.innerHTML = `
+          <select onchange="cambiarScopeAsistencia(this.selectedIndex)" class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-600">
+            ${scopes.map((s, i) => `<option value="${i}" ${scopeAsistenciaActual.tipo === s.tipo && scopeAsistenciaActual.nombre === s.nombre ? 'selected' : ''}>${s.tipo === 'grupo' ? '🏠' : '🤝'} ${s.nombre}</option>`).join('')}
+          </select>
+        `;
+      } else {
+        selectorCont.innerHTML = `<span class="bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-100">${scopeAsistenciaActual.tipo === 'grupo' ? '🏠' : '🤝'} ${scopeAsistenciaActual.nombre}</span>`;
+      }
+
+      const fechaInput = document.getElementById('input-asistencia-fecha');
+      if (!fechaInput.value) fechaInput.value = new Date().toISOString().split('T')[0];
+
+      cargarAsistenciaDeFecha();
+      renderHistorialAsistencia();
+    }
+
+    function cambiarScopeAsistencia(indice) {
+      const scope = scopesAsistenciaCache[indice];
+      if (!scope) return;
+      scopeAsistenciaActual = scope;
+      cargarAsistenciaDeFecha();
+      renderHistorialAsistencia();
+    }
+
+    function cargarAsistenciaDeFecha() {
+      if (!scopeAsistenciaActual) return;
+      const fecha = document.getElementById('input-asistencia-fecha').value;
+      const miembrosScope = getMiembrosDeScope(scopeAsistenciaActual.tipo, scopeAsistenciaActual.nombre);
+      const registroExistente = asistencias.find(a => a.tipo === scopeAsistenciaActual.tipo && a.nombre === scopeAsistenciaActual.nombre && a.fecha === fecha);
+
+      const cont = document.getElementById('contenedor-check-asistencia');
+      const infoEl = document.getElementById('asistencia-scope-info');
+
+      if (miembrosScope.length === 0) {
+        cont.innerHTML = `<p class="text-xs text-slate-400 italic">Este grupo/ministerio todavía no tiene miembros asignados.</p>`;
+        infoEl.innerText = '';
+        return;
+      }
+
+      infoEl.innerText = registroExistente ? 'Ya existe un registro para esta fecha: se actualizará al guardar.' : 'Reunión nueva: marca quiénes asistieron.';
+
+      cont.innerHTML = miembrosScope.map(m => {
+        const nombreComp = `${m.nombre} ${m.apellido}`;
+        const marcado = registroExistente ? registroExistente.presentes.includes(nombreComp) : false;
+        return `
+          <label class="flex items-center gap-3 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2.5 rounded-lg transition border border-slate-100">
+            <input type="checkbox" name="asistencia-check" value="${nombreComp}" ${marcado ? 'checked' : ''} class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+            <span>${nombreComp}</span>
+          </label>
+        `;
+      }).join('');
+    }
+
+    function guardarAsistencia() {
+      if (!scopeAsistenciaActual) return;
+      const fecha = document.getElementById('input-asistencia-fecha').value;
+      if (!fecha) {
+        alert('Selecciona la fecha de la reunión.');
+        return;
+      }
+
+      const miembrosScope = getMiembrosDeScope(scopeAsistenciaActual.tipo, scopeAsistenciaActual.nombre);
+      if (miembrosScope.length === 0) return;
+
+      const checkedBoxes = document.querySelectorAll('input[name="asistencia-check"]:checked');
+      const presentes = Array.from(checkedBoxes).map(cb => cb.value);
+
+      const existente = asistencias.find(a => a.tipo === scopeAsistenciaActual.tipo && a.nombre === scopeAsistenciaActual.nombre && a.fecha === fecha);
+
+      if (existente) {
+        existente.presentes = presentes;
+        existente.total = miembrosScope.length;
+      } else {
+        asistencias.push({
+          id: Date.now(),
+          tipo: scopeAsistenciaActual.tipo,
+          nombre: scopeAsistenciaActual.nombre,
+          fecha,
+          presentes,
+          total: miembrosScope.length,
+          registradoPor: usuarioActivo ? usuarioActivo.nombre : ''
+        });
+      }
+
+      guardarMemoria();
+      alert(`Asistencia guardada: ${presentes.length} de ${miembrosScope.length} presentes.`);
+    }
+
+    function renderHistorialAsistencia() {
+      const tbody = document.getElementById('tabla-historial-asistencia-body');
+      if (!tbody || !scopeAsistenciaActual) return;
+
+      const registros = asistencias
+        .filter(a => a.tipo === scopeAsistenciaActual.tipo && a.nombre === scopeAsistenciaActual.nombre)
+        .sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+      if (registros.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-400 text-xs">Todavía no se registraron reuniones para este grupo/ministerio.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = registros.map(r => {
+        const pct = r.total > 0 ? Math.round((r.presentes.length / r.total) * 100) : 0;
+        const badgeClase = pct >= 70 ? 'bg-emerald-50 text-emerald-600' : pct >= 40 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600';
+        return `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="py-3.5 px-4 font-medium text-slate-800">${formatearFechaAsistencia(r.fecha)}</td>
+            <td class="py-3.5 px-4 text-slate-600 text-xs">${r.presentes.length} / ${r.total}</td>
+            <td class="py-3.5 px-4"><span class="${badgeClase} font-semibold px-2.5 py-1 rounded-full text-xs">${pct}%</span></td>
+            <td class="py-3.5 px-4 flex items-center gap-2">
+              <button onclick="verAusentes(${r.id})" class="bg-slate-100 hover:bg-amber-50 text-slate-600 hover:text-amber-600 p-1.5 rounded-lg transition" title="Ver quién faltó"><i data-lucide="info" class="w-4 h-4"></i></button>
+              <button onclick="editarAsistencia(${r.id})" class="bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 p-1.5 rounded-lg transition" title="Editar"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+              <button onclick="eliminarAsistencia(${r.id})" class="text-slate-400 hover:text-red-600 p-1.5 transition" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function editarAsistencia(id) {
+      const r = asistencias.find(a => a.id === id);
+      if (!r) return;
+      scopeAsistenciaActual = { tipo: r.tipo, nombre: r.nombre };
+      document.getElementById('input-asistencia-fecha').value = r.fecha;
+      renderAsistencia();
+    }
+
+    function eliminarAsistencia(id) {
+      if (confirm('¿Deseas eliminar este registro de asistencia?')) {
+        asistencias = asistencias.filter(a => a.id !== id);
+        guardarMemoria();
+      }
+    }
+
+    function verAusentes(id) {
+      const r = asistencias.find(a => a.id === id);
+      if (!r) return;
+
+      const miembrosScope = getMiembrosDeScope(r.tipo, r.nombre);
+      const ausentes = miembrosScope
+        .map(m => `${m.nombre} ${m.apellido}`)
+        .filter(nombreComp => !r.presentes.includes(nombreComp));
+
+      document.getElementById('subtitulo-modal-ausentes').innerText = `${r.nombre} — ${formatearFechaAsistencia(r.fecha)}`;
+
+      const cont = document.getElementById('lista-ausentes-asistencia');
+      cont.innerHTML = ausentes.length === 0
+        ? `<p class="text-sm text-emerald-600 font-medium text-center py-6">🎉 ¡Asistieron todos!</p>`
+        : ausentes.map(n => `
+            <div class="flex items-center gap-2.5 text-sm text-slate-700 py-2 border-b border-slate-50 last:border-0">
+              <i data-lucide="user-x" class="w-4 h-4 text-red-500 flex-shrink-0"></i>${n}
+            </div>
+          `).join('');
+
+      document.getElementById('modal-ausentes-asistencia').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function cerrarModalAusentes() {
+      document.getElementById('modal-ausentes-asistencia').classList.add('hidden');
+    }
+
+    /* ============ ASIGNACIÓN DE ROL (APROBAR SOLICITUD O EDITAR LÍDER) ============ */
+
+    let emailUsuarioEnProceso = null;
+    let modoModalAsignarRol = 'aprobar'; // 'aprobar' | 'editar'
+
+    function poblarCheckboxesLider(user) {
+      const contGrupos = document.getElementById('contenedor-check-lider-grupos');
+      const contMin = document.getElementById('contenedor-check-lider-ministerios');
+      const gruposActuales = getGruposDeLider(user);
+      const minsActuales = getMinisteriosDeLider(user);
+
+      contGrupos.innerHTML = grupos.length === 0
+        ? '<p class="text-xs text-slate-400 italic">No hay grupos creados todavía.</p>'
+        : grupos.map(g => `
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:bg-slate-100 p-1 rounded-lg transition">
+              <input type="checkbox" name="lider-grupos-check" value="${g}" ${gruposActuales.includes(g) ? 'checked' : ''} class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+              <span>${g}</span>
+            </label>
+          `).join('');
+
+      contMin.innerHTML = ministerios.length === 0
+        ? '<p class="text-xs text-slate-400 italic">No hay ministerios creados todavía.</p>'
+        : ministerios.map(m => `
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:bg-slate-100 p-1 rounded-lg transition">
+              <input type="checkbox" name="lider-ministerios-check" value="${m.nombre}" ${minsActuales.includes(m.nombre) ? 'checked' : ''} class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+              <span>${m.nombre}</span>
+            </label>
+          `).join('');
+    }
+
+    function abrirModalAsignarRol(email) {
+      modoModalAsignarRol = 'aprobar';
+      emailUsuarioEnProceso = email;
+      const user = usuarios.find(u => u.email === email);
+      if (!user) return;
+
+      document.getElementById('titulo-modal-asignar-rol').innerText = 'Aprobar cuenta';
+      document.getElementById('btn-confirmar-asignar-rol').innerText = 'Aprobar cuenta';
+      document.getElementById('subtitulo-modal-asignar-rol').innerText = `${user.nombre} (${user.email})`;
+      document.getElementById('asignar-rol-select').value = '';
+      document.getElementById('campos-asignacion-lider').classList.add('hidden');
+      poblarCheckboxesLider(user);
+
+      document.getElementById('modal-revision-solicitudes').classList.add('hidden');
+      document.getElementById('modal-asignar-rol').classList.remove('hidden');
+    }
+
+    function abrirModalEditarLider(email) {
+      modoModalAsignarRol = 'editar';
+      emailUsuarioEnProceso = email;
+      const user = usuarios.find(u => u.email === email);
+      if (!user) return;
+
+      document.getElementById('titulo-modal-asignar-rol').innerText = 'Editar líder';
+      document.getElementById('btn-confirmar-asignar-rol').innerText = 'Guardar cambios';
+      document.getElementById('subtitulo-modal-asignar-rol').innerText = `${user.nombre} (${user.email})`;
+      document.getElementById('asignar-rol-select').value = 'Líder';
+      document.getElementById('campos-asignacion-lider').classList.remove('hidden');
+      poblarCheckboxesLider(user);
+
+      document.getElementById('modal-asignar-rol').classList.remove('hidden');
+    }
+
+    function cerrarModalAsignarRol() {
+      document.getElementById('modal-asignar-rol').classList.add('hidden');
+      const modoAnterior = modoModalAsignarRol;
+      emailUsuarioEnProceso = null;
+      if (modoAnterior === 'aprobar') abrirModalSolicitudes();
+    }
+
+    function actualizarCamposAsignacionRol() {
+      const rol = document.getElementById('asignar-rol-select').value;
+      document.getElementById('campos-asignacion-lider').classList.toggle('hidden', rol !== 'Líder');
+    }
+
+    function confirmarAsignacionRol(event) {
+      event.preventDefault();
+      if (!emailUsuarioEnProceso) return;
+
+      const user = usuarios.find(u => u.email === emailUsuarioEnProceso);
+      if (!user) return;
+
+      const rol = document.getElementById('asignar-rol-select').value;
+      if (!rol) return;
+
+      user.estado = 'aprobado';
+      user.rol = rol;
+      if (rol === 'Líder') {
+        user.liderGrupos = Array.from(document.querySelectorAll('input[name="lider-grupos-check"]:checked')).map(cb => cb.value);
+        user.liderMinisterios = Array.from(document.querySelectorAll('input[name="lider-ministerios-check"]:checked')).map(cb => cb.value);
+      } else {
+        user.liderGrupos = [];
+        user.liderMinisterios = [];
+      }
+      delete user.liderGrupo;
+      delete user.liderMinisterio;
+
+      const modo = modoModalAsignarRol;
+      const emailProcesado = user.email;
+      const nombreProcesado = user.nombre;
+      emailUsuarioEnProceso = null;
+      guardarMemoria();
+      document.getElementById('modal-asignar-rol').classList.add('hidden');
+
+      if (modo === 'aprobar') {
+        abrirModalSolicitudes();
+        alert(`La cuenta de ${nombreProcesado} (${emailProcesado}) fue aprobada como ${rol}.`);
+      } else {
+        alert(`Se actualizó la asignación de ${nombreProcesado}.`);
+      }
+    }
+
+    /* ============ VISTA LÍDERES (SOLO ADMIN) ============ */
+
+    function renderLideres() {
+      const tbody = document.getElementById('tabla-lideres-body');
+      if (!tbody) return;
+
+      const lideres = usuarios.filter(u => u.rol === 'Líder' && u.estado === 'aprobado');
+
+      if (lideres.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-400 text-xs">Todavía no hay líderes aprobados. Aprobá una solicitud asignando el rol "Líder" para que aparezca acá.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = lideres.map(u => {
+        const gruposBadges = getGruposDeLider(u).map(g => `<span class="bg-blue-50 text-blue-600 font-semibold px-2.5 py-1 rounded-full text-xs">🏠 ${g}</span>`).join(' ');
+        const minsBadges = getMinisteriosDeLider(u).map(m => `<span class="bg-purple-50 text-purple-600 font-semibold px-2.5 py-1 rounded-full text-xs">🤝 ${m}</span>`).join(' ');
+        const badges = gruposBadges + minsBadges;
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="py-3.5 px-4 font-bold text-slate-800">${u.nombre}</td>
+            <td class="py-3.5 px-4 text-slate-500 text-xs">${u.email}</td>
+            <td class="py-3.5 px-4"><div class="flex flex-wrap gap-1.5">${badges || '<span class="text-xs text-slate-400 italic">Sin grupos ni ministerios asignados</span>'}</div></td>
+            <td class="py-3.5 px-4">
+              <button onclick="abrirModalEditarLider('${u.email}')" class="bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 p-1.5 rounded-lg transition" title="Editar asignación"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    /* ============ CALENDARIO DE EVENTOS ESPECIALES (visible para todos, editable solo por Admin/Líder) ============ */
+
+    const MESES_CALENDARIO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+    // Convierte una fecha local a 'YYYY-MM-DD' sin pasar por UTC (evita que el día cambie según el huso horario)
+    function formatearFechaISO(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    // Cualquier Admin o Líder puede CREAR eventos nuevos.
+    function puedeCrearEventos() {
+      return !!usuarioActivo && (usuarioActivo.rol === 'Anfitrión Súper Admin' || usuarioActivo.rol === 'Líder');
+    }
+
+    // Pero para EDITAR/ELIMINAR uno que ya existe: solo el Admin, o el líder que lo creó.
+    function puedeEditarEvento(evento) {
+      if (!usuarioActivo || !evento) return false;
+      if (usuarioActivo.rol === 'Anfitrión Súper Admin') return true;
+      return evento.creadoPorEmail === usuarioActivo.email;
+    }
+
+    function cambiarMesCalendario(delta) {
+      calendarioMesActual.setMonth(calendarioMesActual.getMonth() + delta);
+      renderCalendarioEventos();
+    }
+
+    function irHoyCalendario() {
+      calendarioMesActual = new Date();
+      diaSeleccionadoCalendario = formatearFechaISO(new Date());
+      renderCalendarioEventos();
+    }
+
+    function seleccionarDiaCalendario(fechaStr) {
+      diaSeleccionadoCalendario = fechaStr;
+      renderCalendarioEventos();
+    }
+
+    function abrirNuevoEventoDesdeCalendario() {
+      abrirModalEventoEspecial(diaSeleccionadoCalendario || formatearFechaISO(new Date()));
+    }
+
+    function renderCalendarioEventos() {
+      const grid = document.getElementById('calendario-grid');
+      if (!grid || !usuarioActivo) return;
+
+      if (!diaSeleccionadoCalendario) diaSeleccionadoCalendario = formatearFechaISO(new Date());
+
+      const puedeCrear = puedeCrearEventos();
+      const btnNuevo = document.getElementById('btn-nuevo-evento-especial');
+      if (btnNuevo) btnNuevo.classList.toggle('hidden', !puedeCrear);
+
+      const anio = calendarioMesActual.getFullYear();
+      const mes = calendarioMesActual.getMonth();
+      const nombreMes = MESES_CALENDARIO[mes];
+      document.getElementById('calendario-titulo-mes').innerText = `${nombreMes.charAt(0).toUpperCase()}${nombreMes.slice(1)} de ${anio}`;
+
+      const primerDiaMes = new Date(anio, mes, 1);
+      const diasEnMes = new Date(anio, mes + 1, 0).getDate();
+      const offsetInicio = (primerDiaMes.getDay() + 6) % 7; // lunes = 0
+      const totalCeldas = Math.ceil((offsetInicio + diasEnMes) / 7) * 7;
+      const hoyStr = formatearFechaISO(new Date());
+
+      let html = '';
+      for (let i = 0; i < totalCeldas; i++) {
+        const diaNum = i - offsetInicio + 1;
+        const fechaCelda = new Date(anio, mes, diaNum); // JS ajusta solo el desborde a mes anterior/siguiente
+        const esMesActual = diaNum >= 1 && diaNum <= diasEnMes;
+        const fechaStr = formatearFechaISO(fechaCelda);
+        const esHoy = fechaStr === hoyStr;
+        const esSeleccionado = fechaStr === diaSeleccionadoCalendario;
+
+        const eventosDelDia = eventosEspeciales
+          .filter(e => e.fecha === fechaStr)
+          .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
+
+        const chips = eventosDelDia.slice(0, 3).map(ev => `
+          <div onclick="event.stopPropagation(); seleccionarDiaCalendario('${fechaStr}'); abrirModalEventoEspecial(null, ${ev.id})" class="bg-blue-100 text-blue-700 text-[10px] font-medium px-1.5 py-0.5 rounded truncate hover:bg-blue-200 transition cursor-pointer" title="${ev.titulo}">
+            ${ev.hora ? ev.hora + ' ' : ''}${ev.titulo}
+          </div>
+        `).join('');
+        const masChip = eventosDelDia.length > 3 ? `<div class="text-[10px] text-slate-400 px-1">+${eventosDelDia.length - 3} más</div>` : '';
+
+        html += `
+          <div onclick="seleccionarDiaCalendario('${fechaStr}')" class="min-h-[104px] border-b border-r border-slate-100 p-2 cursor-pointer hover:bg-blue-50/50 transition ${!esMesActual ? 'bg-slate-50/40' : ''} ${esSeleccionado ? 'ring-2 ring-inset ring-blue-500' : ''}">
+            <span class="inline-flex w-6 h-6 items-center justify-center rounded-full text-xs font-semibold ${esHoy ? 'bg-red-500 text-white' : (esMesActual ? 'text-slate-700' : 'text-slate-300')}">${fechaCelda.getDate()}</span>
+            <div class="mt-1 space-y-1">${chips}${masChip}</div>
+          </div>
+        `;
+      }
+
+      grid.innerHTML = html;
+      lucide.createIcons();
+
+      renderListaEventosDia();
+    }
+
+    const DIAS_SEMANA_CALENDARIO = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+    function renderListaEventosDia() {
+      const titulo = document.getElementById('titulo-dia-seleccionado');
+      const lista = document.getElementById('lista-eventos-dia');
+      const btnAgregar = document.getElementById('btn-agregar-evento-dia');
+      if (!titulo || !lista || !diaSeleccionadoCalendario) return;
+
+      const fechaObj = new Date(`${diaSeleccionadoCalendario}T00:00:00`);
+      const nombreDia = DIAS_SEMANA_CALENDARIO[fechaObj.getDay()];
+      titulo.innerText = `${nombreDia.charAt(0).toUpperCase()}${nombreDia.slice(1)}, ${formatearFechaAsistencia(diaSeleccionadoCalendario)}`;
+
+      if (btnAgregar) btnAgregar.classList.toggle('hidden', !puedeCrearEventos());
+
+      const eventosDelDia = eventosEspeciales
+        .filter(e => e.fecha === diaSeleccionadoCalendario)
+        .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
+
+      if (eventosDelDia.length === 0) {
+        lista.innerHTML = `<p class="text-sm text-slate-400 italic py-2">No hay eventos este día.</p>`;
+        return;
+      }
+
+      lista.innerHTML = eventosDelDia.map(ev => {
+        const editable = puedeEditarEvento(ev);
+        return `
+          <div onclick="abrirModalEventoEspecial(null, ${ev.id})" class="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+            <div class="w-1.5 self-stretch rounded-full bg-blue-500 flex-shrink-0"></div>
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-slate-800 text-sm truncate">${ev.titulo}</p>
+              <p class="text-xs text-slate-400 mt-0.5">${ev.hora ? ev.hora + ' hs' : 'Todo el día'}${ev.lugar ? ' · ' + ev.lugar : ''}</p>
+              <p class="text-[11px] text-slate-300 mt-0.5">Creado por ${ev.creadoPor || 'desconocido'}</p>
+            </div>
+            ${editable ? '<span class="text-[10px] bg-blue-50 text-blue-600 font-semibold px-2 py-1 rounded-full flex-shrink-0">Editable</span>' : '<span class="text-[10px] bg-slate-100 text-slate-400 font-semibold px-2 py-1 rounded-full flex-shrink-0">Solo lectura</span>'}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function abrirModalEventoEspecial(fecha = null, id = null) {
+      const evExistente = id ? eventosEspeciales.find(e => e.id === id) : null;
+      const editable = evExistente ? puedeEditarEvento(evExistente) : puedeCrearEventos();
+
+      if (!evExistente && !puedeCrearEventos()) return; // quien no puede crear, no abre el formulario de "nuevo"
+      if (!evExistente && !editable) return;
+
+      eventoEspecialEditandoId = id;
+
+      document.getElementById('titulo-modal-evento-especial').innerText = evExistente ? (editable ? 'Editar Evento' : 'Detalle del Evento') : 'Nuevo Evento';
+      document.getElementById('subtitulo-modal-evento-especial').innerText = evExistente ? formatearFechaAsistencia(evExistente.fecha) : '';
+
+      document.getElementById('input-evento-esp-titulo').value = evExistente ? evExistente.titulo : '';
+      document.getElementById('input-evento-esp-fecha').value = evExistente ? evExistente.fecha : (fecha || formatearFechaISO(new Date()));
+      document.getElementById('input-evento-esp-hora').value = evExistente ? (evExistente.hora || '') : '';
+      document.getElementById('input-evento-esp-lugar').value = evExistente ? (evExistente.lugar || '') : '';
+      document.getElementById('input-evento-esp-desc').value = evExistente ? (evExistente.descripcion || '') : '';
+
+      ['input-evento-esp-titulo', 'input-evento-esp-fecha', 'input-evento-esp-hora', 'input-evento-esp-lugar', 'input-evento-esp-desc'].forEach(campoId => {
+        document.getElementById(campoId).disabled = !editable;
+      });
+
+      document.getElementById('btn-guardar-evento-especial').classList.toggle('hidden', !editable);
+      document.getElementById('btn-eliminar-evento-especial').classList.toggle('hidden', !(editable && evExistente));
+
+      document.getElementById('modal-evento-especial').classList.remove('hidden');
+    }
+
+    function cerrarModalEventoEspecial() {
+      document.getElementById('modal-evento-especial').classList.add('hidden');
+      eventoEspecialEditandoId = null;
+    }
+
+    function guardarEventoEspecial(event) {
+      event.preventDefault();
+
+      const esNuevo = !eventoEspecialEditandoId;
+      const evExistente = esNuevo ? null : eventosEspeciales.find(e => e.id === eventoEspecialEditandoId);
+
+      if (esNuevo && !puedeCrearEventos()) return;
+      if (!esNuevo && !puedeEditarEvento(evExistente)) return;
+
+      const titulo = document.getElementById('input-evento-esp-titulo').value.trim();
+      const fecha = document.getElementById('input-evento-esp-fecha').value;
+      const hora = document.getElementById('input-evento-esp-hora').value;
+      const lugar = document.getElementById('input-evento-esp-lugar').value.trim();
+      const descripcion = document.getElementById('input-evento-esp-desc').value.trim();
+
+      if (!titulo || !fecha) return;
+
+      if (evExistente) {
+        evExistente.titulo = titulo;
+        evExistente.fecha = fecha;
+        evExistente.hora = hora;
+        evExistente.lugar = lugar;
+        evExistente.descripcion = descripcion;
+      } else {
+        eventosEspeciales.push({
+          id: Date.now(),
+          titulo,
+          fecha,
+          hora,
+          lugar,
+          descripcion,
+          creadoPor: usuarioActivo ? usuarioActivo.nombre : '',
+          creadoPorEmail: usuarioActivo ? usuarioActivo.email : ''
+        });
+      }
+
+      diaSeleccionadoCalendario = fecha;
+      guardarMemoria();
+      cerrarModalEventoEspecial();
+    }
+
+    function eliminarEventoEspecial() {
+      if (!eventoEspecialEditandoId) return;
+      const ev = eventosEspeciales.find(e => e.id === eventoEspecialEditandoId);
+      if (!ev || !puedeEditarEvento(ev)) return;
+
+      if (confirm('¿Deseas eliminar este evento?')) {
+        eventosEspeciales = eventosEspeciales.filter(e => e.id !== eventoEspecialEditandoId);
+        guardarMemoria();
+        cerrarModalEventoEspecial();
+      }
+    }
+
+    /* ============ ASISTENTE DE MENSAJES (PLANTILLAS PARA COMUNICACIÓN) ============ */
+
+    function generarMensajeAsistente() {
+      const tipoEl = document.getElementById('asistente-tipo-mensaje');
+      const resultadoEl = document.getElementById('asistente-resultado');
+      if (!tipoEl || !resultadoEl) return;
+
+      const tipo = tipoEl.value;
+      const nombre = document.getElementById('asistente-nombre').value.trim();
+      const tema = document.getElementById('asistente-tema').value.trim();
+      const fechaHora = document.getElementById('asistente-fecha-hora').value.trim();
+      const saludo = nombre ? `Hola ${nombre}! 👋` : 'Hola! 👋';
+
+      const plantillas = {
+        invitacion_evento: `${saludo}\n\nTe esperamos en *${tema || 'nuestro próximo evento'}*${fechaHora ? `, el ${fechaHora}` : ''}. ¡Va a ser una bendición tenerte ahí! 🙌\n\nCualquier duda, escribinos.`,
+        recordatorio_celula: `${saludo}\n\nTe recordamos que tenemos célula${fechaHora ? ` ${fechaHora}` : ''}${tema ? ` en ${tema}` : ''}. ¡Te esperamos! 🏠`,
+        bienvenida: `${saludo}\n\n¡Qué alegría que te sumes a nuestra familia! 🎉 Cualquier cosa que necesites, contá con nosotros.`,
+        seguimiento_prospecto: `${saludo}\n\n¿Cómo estás? Quería saber cómo te fue después de tu visita${tema ? ` a ${tema}` : ''}. Nos encantaría verte de nuevo pronto 😊`,
+        aviso_general: `${saludo}\n\n${tema || 'Te compartimos un aviso importante'}${fechaHora ? ` — ${fechaHora}` : ''}.`
+      };
+
+      const mensaje = plantillas[tipo] || '';
+      resultadoEl.value = mensaje;
+
+      const btnWhatsapp = document.getElementById('asistente-btn-whatsapp');
+      if (btnWhatsapp) btnWhatsapp.href = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+    }
+
+    function copiarMensajeAsistente() {
+      const texto = document.getElementById('asistente-resultado').value;
+      if (!texto) return;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(texto)
+          .then(() => alert('Mensaje copiado. Ya lo podés pegar donde quieras.'))
+          .catch(() => alert('No se pudo copiar automáticamente. Seleccioná el texto y copialo manualmente.'));
+      } else {
+        alert('No se pudo copiar automáticamente. Seleccioná el texto y copialo manualmente.');
+      }
+    }
+
+    chequearSesionGuardada();
+    window.addEventListener('load', inicializarGoogleSignIn);
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,97 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function estaLogueado() {
+      return request.auth != null;
+    }
+
+    function miPerfil() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function estaAprobado() {
+      return estaLogueado() && miPerfil().estado == 'aprobado';
+    }
+
+    function isAdmin() {
+      return estaLogueado() && miPerfil().rol == 'Anfitrión Súper Admin';
+    }
+
+    function esLider() {
+      return estaLogueado() && miPerfil().rol == 'Líder';
+    }
+
+    function esLiderDeEsteRegistro(datos) {
+      return esLider() && (
+        (datos.tipo == 'grupo' && datos.nombre in miPerfil().liderGrupos) ||
+        (datos.tipo == 'ministerio' && datos.nombre in miPerfil().liderMinisterios)
+      );
+    }
+
+    // Perfiles de usuario: nombre, correo, rol, estado de aprobación, grupos/ministerios a cargo.
+    // Cada quien puede LEER su propio perfil (para saber si ya lo aprobaron); el admin lee todos.
+    // Al crearse, una cuenta nueva solo puede quedar "pendiente" y sin rol — nadie se puede
+    // auto-aprobar ni auto-asignar el rol de administrador (excepto la cuenta del HOST_EMAIL,
+    // que se auto-aprueba una sola vez al registrarse por primera vez).
+    match /usuarios/{userId} {
+      allow read: if estaLogueado() && (request.auth.uid == userId || isAdmin());
+      allow create: if estaLogueado() && request.auth.uid == userId && (
+        (request.resource.data.estado == 'pendiente' && request.resource.data.rol == null) ||
+        (request.auth.token.email == 'psocikian@gmail.com'
+          && request.resource.data.estado == 'aprobado'
+          && request.resource.data.rol == 'Anfitrión Súper Admin')
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    // Lista de nombres de grupos pequeños (un solo documento con un array).
+    match /configuracion/grupos {
+      allow read: if estaAprobado();
+      allow write: if isAdmin() || esLider();
+    }
+
+    // Miembros de la iglesia.
+    match /miembros/{id} {
+      allow read: if estaAprobado();
+      // Un consolidador puede CREAR un miembro (pasa cuando marca un prospecto como "Consolidado"),
+      // pero no editar ni borrar miembros existentes.
+      allow create: if isAdmin() || esLider() || miPerfil().rol == 'Consolidador';
+      allow update, delete: if isAdmin() || esLider();
+    }
+
+    // Ministerios (con sus eventos internos anidados). Solo el admin los gestiona.
+    match /ministerios/{id} {
+      allow read: if estaAprobado();
+      allow write: if isAdmin();
+    }
+
+    // Prospectos / seguimiento de consolidación.
+    match /prospectos/{id} {
+      allow read: if estaAprobado();
+      allow write: if isAdmin() || miPerfil().rol == 'Consolidador';
+    }
+
+    // Asistencia semanal: un líder solo puede crear/editar/borrar la de su propio grupo o ministerio.
+    match /asistencias/{id} {
+      allow read: if estaAprobado();
+      allow create: if isAdmin() || esLiderDeEsteRegistro(request.resource.data);
+      allow update, delete: if isAdmin() || esLiderDeEsteRegistro(resource.data);
+    }
+
+    // Historial diario de estadísticas del panel (una "foto" por día). Solo lo escribe el admin.
+    match /historicoDiario/{fecha} {
+      allow read: if estaAprobado();
+      allow write: if isAdmin();
+    }
+
+    // Eventos especiales del calendario: los crea admin o líder; solo el admin o quien lo creó
+    // puede editarlo o borrarlo. Todos los aprobados (admin, líder, consolidador) pueden verlos.
+    match /eventosEspeciales/{id} {
+      allow read: if estaAprobado();
+      allow create: if isAdmin() || esLider();
+      allow update, delete: if isAdmin() || resource.data.creadoPorEmail == request.auth.token.email;
+    }
+  }
+}

@@ -10,10 +10,12 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- EMAILJS SDK -->
+  <!-- EMAILJS SDK (solo para el aviso al admin de nuevas solicitudes) -->
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-  <!-- GOOGLE IDENTITY SERVICES (Iniciar sesión con Google) -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- FIREBASE (autenticación + base de datos en la nube, compartida entre todos los dispositivos) -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <style>
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -41,7 +43,10 @@
           <p class="text-xs text-slate-400 mt-1">Ingresa a la plataforma de tu iglesia</p>
         </div>
         <p id="login-error" class="hidden text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2"></p>
-        <div id="google-signin-login" class="flex justify-center"></div>
+        <button type="button" onclick="iniciarSesionGoogle()" class="w-full border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 rounded-xl text-sm shadow-sm transition flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.6C29.7 34.9 27 36 24 36c-5.3 0-9.7-3.1-11.3-7.7l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.3 5.6l6.6 5.6C41.5 36.9 44 31 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+          Continuar con Google
+        </button>
         <div class="flex items-center gap-3 text-[11px] text-slate-400">
           <div class="flex-1 border-t border-slate-100"></div> o con tu correo <div class="flex-1 border-t border-slate-100"></div>
         </div>
@@ -69,11 +74,14 @@
           <p class="text-xs text-slate-400 mt-1">Verificamos tu correo y después el administrador aprueba tu acceso</p>
         </div>
         <p id="registro-error" class="hidden text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2"></p>
-        <div id="google-signin-registro" class="flex justify-center"></div>
+        <button type="button" onclick="iniciarSesionGoogle()" class="w-full border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 rounded-xl text-sm shadow-sm transition flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.6C29.7 34.9 27 36 24 36c-5.3 0-9.7-3.1-11.3-7.7l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.3 5.6l6.6 5.6C41.5 36.9 44 31 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+          Continuar con Google
+        </button>
         <div class="flex items-center gap-3 text-[11px] text-slate-400">
           <div class="flex-1 border-t border-slate-100"></div> o con tu correo <div class="flex-1 border-t border-slate-100"></div>
         </div>
-        <form onsubmit="iniciarVerificacionCorreo(event)" class="space-y-4">
+        <form onsubmit="registrarConCorreo(event)" class="space-y-4">
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre completo</label>
             <input type="text" id="registro-nombre" required placeholder="Ej: Juan Pérez" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
@@ -86,38 +94,30 @@
             <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña</label>
             <input type="password" id="registro-password" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
           </div>
-          <button type="submit" id="btn-enviar-verificacion" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition">Enviar código de verificación</button>
+          <button type="submit" id="btn-enviar-verificacion" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition">Crear cuenta</button>
         </form>
         <div class="text-center text-xs pt-1">
           <button onclick="mostrarVistaAuth('login')" class="text-slate-500 font-semibold hover:underline">Ya tengo una cuenta</button>
         </div>
       </div>
 
-      <!-- FORM VERIFICAR CÓDIGO DE CORREO -->
-      <div id="auth-view-verificar" class="hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm p-8 space-y-5">
-        <div>
-          <h2 class="text-xl font-bold text-slate-900">Verificá tu correo</h2>
-          <p class="text-xs text-slate-400 mt-1" id="verificar-subtitulo">Te enviamos un código de 6 dígitos</p>
+      <!-- AVISO: FALTA VERIFICAR EL CORREO (Firebase manda un link, no un código) -->
+      <div id="auth-view-verificar" class="hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm p-8 space-y-4 text-center">
+        <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto">
+          <i data-lucide="mail-check" class="w-7 h-7"></i>
         </div>
-        <p id="verificar-error" class="hidden text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2"></p>
-        <form onsubmit="confirmarCodigoVerificacion(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">Código de verificación</label>
-            <input type="text" id="verificar-codigo" required maxlength="6" inputmode="numeric" placeholder="000000" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-center text-lg tracking-[0.5em] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
-          </div>
-          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition">Verificar y enviar solicitud</button>
-        </form>
-        <div class="flex justify-between text-xs pt-1">
-          <button onclick="reenviarCodigoVerificacion()" class="text-blue-600 font-semibold hover:underline">Reenviar código</button>
-          <button onclick="mostrarVistaAuth('registro')" class="text-slate-500 font-semibold hover:underline">Cancelar</button>
-        </div>
+        <h2 class="text-lg font-bold text-slate-900">Verificá tu correo</h2>
+        <p class="text-sm text-slate-500" id="verificar-subtitulo">Te enviamos un link de verificación por correo.</p>
+        <p id="verificar-error" class="hidden text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2 text-left"></p>
+        <button onclick="reenviarVerificacionEmail()" class="w-full border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 rounded-xl text-sm transition">Reenviar correo de verificación</button>
+        <button onclick="cerrarSesion()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition">Ya verifiqué, volver a iniciar sesión</button>
       </div>
 
       <!-- FORM OLVIDÉ CONTRASEÑA -->
       <div id="auth-view-olvide" class="hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm p-8 space-y-5">
         <div>
           <h2 class="text-xl font-bold text-slate-900">Recuperar contraseña</h2>
-          <p class="text-xs text-slate-400 mt-1">Te enviaremos una contraseña temporal por correo</p>
+          <p class="text-xs text-slate-400 mt-1">Te enviaremos un link para elegir una nueva contraseña</p>
         </div>
         <p id="olvide-error" class="hidden text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2"></p>
         <p id="olvide-exito" class="hidden text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2"></p>
@@ -126,7 +126,7 @@
             <label class="block text-xs font-semibold text-slate-700 mb-1">Correo electrónico</label>
             <input type="email" id="olvide-email" required placeholder="tucorreo@email.com" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50/50">
           </div>
-          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition">Enviar contraseña temporal</button>
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm transition">Enviar link de recuperación</button>
         </form>
         <div class="text-center text-xs pt-1">
           <button onclick="mostrarVistaAuth('login')" class="text-slate-500 font-semibold hover:underline">Volver a iniciar sesión</button>
@@ -1134,7 +1134,7 @@
 
     const HOST_EMAIL = "psocikian@gmail.com";
 
-    // CLAVES CONFIGURADAS DE EMAILJS
+    // CLAVES CONFIGURADAS DE EMAILJS (solo se usa para avisarle al admin de nuevas solicitudes)
     const EMAILJS_PUBLIC_KEY = "0HSh5_Ka-ILgIC-DJ";
     const EMAILJS_TEMPLATE_ID = "template_ugum9ge";
     const EMAILJS_SERVICE_ID = "service_m9pno7h";
@@ -1143,36 +1143,33 @@
       emailjs.init(EMAILJS_PUBLIC_KEY);
     }
 
-    // ID DE CLIENTE DE GOOGLE PARA "INICIAR SESIÓN CON GOOGLE"
-    // Reemplazá esto por tu propio Client ID de Google Cloud Console (ver instrucciones del asistente).
-    // Mientras diga "TU_GOOGLE_CLIENT_ID..." el botón de Google queda oculto automáticamente.
-    const GOOGLE_CLIENT_ID = "TU_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+    // FIREBASE: autenticación + base de datos en la nube (compartida entre todos los dispositivos)
+    const firebaseConfig = {
+      apiKey: "AIzaSyABWqDEuE8FwWIiAdWPyW9VzT5J3DaMYfQ",
+      authDomain: "cdd-app-7bd82.firebaseapp.com",
+      projectId: "cdd-app-7bd82",
+      storageBucket: "cdd-app-7bd82.firebasestorage.app",
+      messagingSenderId: "16887606528",
+      appId: "1:16887606528:web:99ff8907ee760df8e5d7e5"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-    // USUARIO ADMIN PREDETERMINADO (siempre existe: es la cuenta que gestiona la iglesia)
-    // La contraseña "Iangenio10" está guardada como hash SHA-256, nunca en texto plano.
-    const ADMIN_PREDETERMINADO = { nombre: "Psocikian", email: "psocikian@gmail.com", passHash: "7c68ba9f4b33e8abc44a5da52946f3f750533ad98133dddc2a9c96469bfa60fc", estado: "aprobado", rol: "Anfitrión Súper Admin" };
-    let usuarios = JSON.parse(localStorage.getItem('miiglesia_usuarios')) || [];
-    if (!usuarios.some(u => u.email === ADMIN_PREDETERMINADO.email)) {
-      usuarios.push(ADMIN_PREDETERMINADO);
-    }
+    let usuarios = [];
     let usuarioActivo = null;
-    let miembros = JSON.parse(localStorage.getItem('miiglesia_miembros')) || [];
-    let grupos = JSON.parse(localStorage.getItem('miiglesia_grupos')) || ['Líderes'];
-    let ministerios = JSON.parse(localStorage.getItem('miiglesia_ministerios')) || [
-      { id: 1, nombre: "Alabanza & Adoración", lider: "Sin asignar", miembros: [], eventos: [] },
-      { id: 2, nombre: "Niños & Escuela Dominical", lider: "Sin asignar", miembros: [], eventos: [] }
-    ];
-    let prospectos = JSON.parse(localStorage.getItem('miiglesia_prospectos')) || [
-      { id: 1, nombre: "Martin Luther", telefono: "+542983345988", fecha: "2026-08-05", etapa: "Nuevos", respondio: "Sí", visitas: "1", celula: "No" }
-    ];
+    let miembros = [];
+    let grupos = [];
+    let ministerios = [];
+    let prospectos = [];
     // asistencias: { id, tipo: 'grupo'|'ministerio', nombre, fecha, presentes: ["Nombre Apellido", ...], total, registradoPor }
-    let asistencias = JSON.parse(localStorage.getItem('miiglesia_asistencias')) || [];
+    let asistencias = [];
     // historicoDiario: una "foto" por día de las estadísticas del panel, para poder ver la evolución en el año
     // { fecha: 'YYYY-MM-DD', miembros, visitantes, consolidacionPct, asistenciaPct, proyeccion }
-    let historicoDiario = JSON.parse(localStorage.getItem('miiglesia_historico')) || [];
+    let historicoDiario = [];
     // eventosEspeciales: eventos generales de la iglesia (NO son los eventos internos de cada ministerio)
-    // { id, titulo, fecha: 'YYYY-MM-DD', hora, lugar, descripcion, creadoPor }
-    let eventosEspeciales = JSON.parse(localStorage.getItem('miiglesia_eventos_especiales')) || [];
+    // { id, titulo, fecha: 'YYYY-MM-DD', hora, lugar, descripcion, creadoPor, creadoPorEmail }
+    let eventosEspeciales = [];
 
     let tempFoto = null;
     let minSeleccionadoId = null;
@@ -1184,23 +1181,9 @@
     let calendarioMesActual = new Date();
     let eventoEspecialEditandoId = null;
     let diaSeleccionadoCalendario = null; // se inicializa en "hoy" la primera vez que se abre el calendario
-    let intentosLogin = JSON.parse(localStorage.getItem('miiglesia_intentos_login')) || {};
-    let registroPendienteVerificacion = null; // { nombre, email, passHash, codigo, expira }
+    let listenersFirestoreActivos = []; // para poder "desconectar" al cerrar sesión
 
     function guardarMemoria() {
-      localStorage.setItem('miiglesia_usuarios', JSON.stringify(usuarios));
-      if (usuarioActivo) {
-        guardarSesionActiva(usuarioActivo); // renueva la expiración de la sesión mientras esté activo
-      } else {
-        localStorage.removeItem('miiglesia_usuario_activo');
-      }
-      localStorage.setItem('miiglesia_miembros', JSON.stringify(miembros));
-      localStorage.setItem('miiglesia_grupos', JSON.stringify(grupos));
-      localStorage.setItem('miiglesia_ministerios', JSON.stringify(ministerios));
-      localStorage.setItem('miiglesia_prospectos', JSON.stringify(prospectos));
-      localStorage.setItem('miiglesia_asistencias', JSON.stringify(asistencias));
-      localStorage.setItem('miiglesia_eventos_especiales', JSON.stringify(eventosEspeciales));
-
       renderGruposDropdowns();
       renderTabla();
       renderTarjetasGrupos();
@@ -1211,36 +1194,102 @@
       renderCalendarioEventos();
       actualizarContadores();
       actualizarGraficos();
-      registrarSnapshotDiario();
       actualizarInterfazUsuario();
     }
 
     // Guarda (o actualiza si ya existe) la "foto" de hoy con los valores actuales del panel.
     // Así, día a día, se arma el historial que permite ver si una estadística subió o bajó.
     function registrarSnapshotDiario() {
+      if (!usuarioActivo || usuarioActivo.rol !== 'Anfitrión Súper Admin') return; // solo hace falta un registro por día para toda la iglesia
       const hoy = new Date().toISOString().split('T')[0];
+      if (historicoDiario.some(h => h.fecha === hoy)) return; // ya se registró hoy (el listener ya lo trajo)
 
       const consolidadosCnt = prospectos.filter(p => p.etapa === 'Consolidados').length;
       const pctConsolidacion = prospectos.length > 0 ? Math.round((consolidadosCnt / prospectos.length) * 100) : 0;
       const pctAsistencia = calcularPctAsistenciaCelulas();
 
-      const snapshot = {
+      db.collection('historicoDiario').doc(hoy).set({
         fecha: hoy,
         miembros: miembros.length,
         visitantes: prospectos.length,
         consolidacionPct: pctConsolidacion,
         asistenciaPct: pctAsistencia === null ? 0 : pctAsistencia,
         proyeccion: calcularProyeccionProspectos()
-      };
+      }).catch(() => {});
+    }
 
-      const idx = historicoDiario.findIndex(h => h.fecha === hoy);
-      if (idx >= 0) {
-        historicoDiario[idx] = snapshot;
-      } else {
-        historicoDiario.push(snapshot);
-      }
+    /* ============ LISTENERS DE FIRESTORE (sincronización en tiempo real entre todos los dispositivos) ============ */
 
-      localStorage.setItem('miiglesia_historico', JSON.stringify(historicoDiario));
+    function detenerListenersFirestore() {
+      listenersFirestoreActivos.forEach(desconectar => desconectar());
+      listenersFirestoreActivos = [];
+    }
+
+    function iniciarListenersFirestore() {
+      detenerListenersFirestore();
+
+      listenersFirestoreActivos.push(
+        db.collection('usuarios').onSnapshot(snap => {
+          usuarios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          if (usuarioActivo) {
+            const actualizado = usuarios.find(u => u.id === usuarioActivo.id);
+            if (actualizado) usuarioActivo = actualizado;
+          }
+          renderLideres();
+          actualizarInterfazUsuario();
+          const modalSolicitudes = document.getElementById('modal-revision-solicitudes');
+          if (modalSolicitudes && !modalSolicitudes.classList.contains('hidden')) abrirModalSolicitudes();
+        }, () => {})
+      );
+
+      listenersFirestoreActivos.push(
+        db.collection('miembros').onSnapshot(snap => {
+          miembros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          guardarMemoria();
+        }, () => {})
+      );
+
+      listenersFirestoreActivos.push(
+        db.collection('configuracion').doc('grupos').onSnapshot(doc => {
+          grupos = (doc.exists && doc.data().lista) ? doc.data().lista : [];
+          guardarMemoria();
+        }, () => {})
+      );
+
+      listenersFirestoreActivos.push(
+        db.collection('ministerios').onSnapshot(snap => {
+          ministerios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          guardarMemoria();
+        }, () => {})
+      );
+
+      listenersFirestoreActivos.push(
+        db.collection('prospectos').onSnapshot(snap => {
+          prospectos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          guardarMemoria();
+        }, () => {})
+      );
+
+      listenersFirestoreActivos.push(
+        db.collection('asistencias').onSnapshot(snap => {
+          asistencias = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          guardarMemoria();
+        }, () => {})
+      );
+
+      listenersFirestoreActivos.push(
+        db.collection('eventosEspeciales').onSnapshot(snap => {
+          eventosEspeciales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          guardarMemoria();
+        }, () => {})
+      );
+
+      listenersFirestoreActivos.push(
+        db.collection('historicoDiario').onSnapshot(snap => {
+          historicoDiario = snap.docs.map(d => d.data());
+          registrarSnapshotDiario();
+        }, () => {})
+      );
     }
 
     function actualizarInterfazUsuario() {
@@ -1492,12 +1541,13 @@
 
     function responderSolicitud(email, aprobado) {
       const user = usuarios.find(u => u.email === email);
-      if (user) {
-        user.estado = aprobado ? 'aprobado' : 'rechazado';
-        guardarMemoria();
-        abrirModalSolicitudes();
-        alert(`La cuenta de ${user.nombre} (${user.email}) ha sido ${aprobado ? 'APROBADA' : 'DESAPROBADA'}.`);
-      }
+      if (!user) return;
+      db.collection('usuarios').doc(user.id).update({ estado: aprobado ? 'aprobado' : 'rechazado' })
+        .then(() => {
+          abrirModalSolicitudes();
+          alert(`La cuenta de ${user.nombre} (${user.email}) ha sido ${aprobado ? 'APROBADA' : 'DESAPROBADA'}.`);
+        })
+        .catch(err => alert('No se pudo actualizar: ' + err.message));
     }
 
     function calcularEdad() {
@@ -1523,6 +1573,11 @@
     function previewImage(event) {
       const file = event.target.files[0];
       if (file) {
+        if (file.size > 700 * 1024) {
+          alert('La foto es muy pesada para guardarla en la base de datos (máximo ~700KB). Probá con una más liviana.');
+          event.target.value = '';
+          return;
+        }
         const reader = new FileReader();
         reader.onload = function(e) {
           tempFoto = e.target.result;
@@ -1583,10 +1638,10 @@
           <td class="py-3.5 px-4 text-xs">${badgeVisitas}</td>
           <td class="py-3.5 px-4 text-xs">${badgeCelula}</td>
           <td class="py-3.5 px-4 flex items-center gap-2">
-            <button onclick="abrirModalSeguimiento(${p.id})" class="bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 p-1.5 rounded-lg transition" title="Editar seguimiento">
+            <button onclick="abrirModalSeguimiento('${p.id}')" class="bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 p-1.5 rounded-lg transition" title="Editar seguimiento">
               <i data-lucide="edit-3" class="w-4 h-4"></i>
             </button>
-            <button onclick="eliminarProspecto(${p.id})" class="text-slate-400 hover:text-red-600 p-1.5 transition" title="Eliminar">
+            <button onclick="eliminarProspecto('${p.id}')" class="text-slate-400 hover:text-red-600 p-1.5 transition" title="Eliminar">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
           </td>
@@ -1615,7 +1670,6 @@
       if(!nombre || !telefono) return;
 
       const nuevo = {
-        id: Date.now(),
         nombre,
         telefono,
         fecha,
@@ -1625,9 +1679,9 @@
         celula: "No"
       };
 
-      prospectos.unshift(nuevo);
-      guardarMemoria();
-      cerrarModalNuevoProspecto();
+      db.collection('prospectos').add(nuevo)
+        .then(() => cerrarModalNuevoProspecto())
+        .catch(err => alert('No se pudo guardar: ' + err.message));
     }
 
     function abrirModalSeguimiento(id) {
@@ -1649,19 +1703,26 @@
       prospectoEditandoId = null;
     }
 
-    function guardarSeguimiento(e) {
+    async function guardarSeguimiento(e) {
       e.preventDefault();
       if(!prospectoEditandoId) return;
 
       const p = prospectos.find(item => item.id === prospectoEditandoId);
-      if(p) {
-        const etapaAnterior = p.etapa;
-        const nuevaEtapa = document.getElementById('edit-prospecto-etapa').value;
+      if(!p) return;
 
-        p.etapa = nuevaEtapa;
-        p.respondio = document.getElementById('edit-prospecto-respondio').value;
-        p.visitas = document.getElementById('edit-prospecto-visitas').value;
-        p.celula = document.getElementById('edit-prospecto-celula').value;
+      const etapaAnterior = p.etapa;
+      const nuevaEtapa = document.getElementById('edit-prospecto-etapa').value;
+
+      const cambios = {
+        etapa: nuevaEtapa,
+        respondio: document.getElementById('edit-prospecto-respondio').value,
+        visitas: document.getElementById('edit-prospecto-visitas').value,
+        celula: document.getElementById('edit-prospecto-celula').value
+      };
+
+      try {
+        const batch = db.batch();
+        batch.update(db.collection('prospectos').doc(p.id), cambios);
 
         if(etapaAnterior !== 'Consolidados' && nuevaEtapa === 'Consolidados') {
           const partesNombre = p.nombre.split(' ');
@@ -1671,7 +1732,7 @@
           const existeYa = miembros.some(m => m.telefono === p.telefono || (m.nombre === nombreVal && m.apellido === apellidoVal));
 
           if(!existeYa) {
-            miembros.unshift({
+            batch.set(db.collection('miembros').doc(), {
               nombre: nombreVal,
               apellido: apellidoVal,
               sexo: 'Masculino',
@@ -1686,19 +1747,23 @@
               grupo: 'Sin grupo',
               foto: null
             });
-            alert(`🎉 ¡Atención! ${p.nombre} ha sido marcado como "Consolidado" y se agregó automáticamente al Módulo de Miembros.`);
           }
         }
 
-        guardarMemoria();
+        await batch.commit();
+
+        if(etapaAnterior !== 'Consolidados' && nuevaEtapa === 'Consolidados') {
+          alert(`🎉 ¡Atención! ${p.nombre} ha sido marcado como "Consolidado" y se agregó automáticamente al Módulo de Miembros.`);
+        }
         cerrarModalSeguimiento();
+      } catch (err) {
+        alert('No se pudo guardar: ' + err.message);
       }
     }
 
     function eliminarProspecto(id) {
       if(confirm('¿Deseas eliminar este registro de prospecto?')) {
-        prospectos = prospectos.filter(p => p.id !== id);
-        guardarMemoria();
+        db.collection('prospectos').doc(id).delete().catch(err => alert('No se pudo eliminar: ' + err.message));
       }
     }
 
@@ -1732,7 +1797,7 @@
         return;
       }
 
-      grupos.forEach((grupo, idx) => {
+      grupos.forEach((grupo) => {
         const miembrosEnGrupo = miembros.filter(m => m.grupo === grupo).length;
         const card = document.createElement('div');
         card.className = "bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between";
@@ -1740,7 +1805,7 @@
           <div>
             <div class="flex items-center justify-between mb-3">
               <span class="p-2 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="users" class="w-5 h-5"></i></span>
-              <button onclick="eliminarGrupo(${idx})" title="Eliminar Grupo" class="text-slate-400 hover:text-red-600 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              <button onclick="eliminarGrupo('${grupo}')" title="Eliminar Grupo" class="text-slate-400 hover:text-red-600 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </div>
             <h3 class="font-bold text-slate-800 text-lg">${grupo}</h3>
             <p class="text-xs text-slate-400 mt-1">${miembrosEnGrupo} Miembro(s) asignado(s)</p>
@@ -1777,8 +1842,8 @@
                 <span>📅 ${ev.nombre}</span>
                 <div class="flex items-center gap-1">
                   <span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full mr-1">${ev.fecha} ${ev.hora ? '• ' + ev.hora : ''}</span>
-                  <button onclick="editarEventoMinisterio(${m.id}, ${ev.id})" class="text-slate-400 hover:text-blue-600 p-0.5" title="Editar Evento"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-                  <button onclick="eliminarEventoMinisterio(${m.id}, ${ev.id})" class="text-slate-400 hover:text-red-600 p-0.5" title="Eliminar Evento"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
+                  <button onclick="editarEventoMinisterio('${m.id}', ${ev.id})" class="text-slate-400 hover:text-blue-600 p-0.5" title="Editar Evento"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                  <button onclick="eliminarEventoMinisterio('${m.id}', ${ev.id})" class="text-slate-400 hover:text-red-600 p-0.5" title="Eliminar Evento"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
                 </div>
               </div>
               <p class="text-[11px] text-slate-500 font-medium">Servidores: ${ev.servidores && ev.servidores.length > 0 ? ev.servidores.join(', ') : 'Sin asignar'}</p>
@@ -1795,8 +1860,8 @@
             <div class="flex items-center justify-between">
               <div class="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="hand-heart" class="w-5 h-5"></i></div>
               <div class="flex items-center gap-1">
-                <button onclick="abrirModalCrearMinisterio(${m.id})" title="Editar Ministerio & Miembros" class="text-slate-400 hover:text-blue-600 p-1 transition"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                <button onclick="eliminarMinisterio(${m.id})" title="Eliminar Ministerio" class="text-slate-400 hover:text-red-600 p-1 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                <button onclick="abrirModalCrearMinisterio('${m.id}')" title="Editar Ministerio & Miembros" class="text-slate-400 hover:text-blue-600 p-1 transition"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                <button onclick="eliminarMinisterio('${m.id}')" title="Eliminar Ministerio" class="text-slate-400 hover:text-red-600 p-1 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
               </div>
             </div>
             <div>
@@ -1812,7 +1877,7 @@
             </div>
           </div>
           <div class="pt-3 border-t border-slate-100">
-            <button onclick="abrirModalEventoMinisterio(${m.id})" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5">
+            <button onclick="abrirModalEventoMinisterio('${m.id}')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5">
               <i data-lucide="calendar-plus" class="w-4 h-4 text-blue-600"></i> Agendar Evento / Servidores
             </button>
           </div>
@@ -1881,32 +1946,17 @@
       const checkedBoxes = document.querySelectorAll('input[name="miembros-min-check"]:checked');
       const miembrosMinisterio = Array.from(checkedBoxes).map(cb => cb.value);
 
-      if (ministerioEditandoId) {
-        const min = ministerios.find(m => m.id === ministerioEditandoId);
-        if(min) {
-          min.nombre = nombre;
-          min.lider = lider;
-          min.miembros = miembrosMinisterio;
-        }
-      } else {
-        const nuevo = {
-          id: Date.now(),
-          nombre: nombre,
-          lider: lider,
-          miembros: miembrosMinisterio,
-          eventos: []
-        };
-        ministerios.push(nuevo);
-      }
+      const guardado = ministerioEditandoId
+        ? db.collection('ministerios').doc(ministerioEditandoId).update({ nombre, lider, miembros: miembrosMinisterio })
+        : db.collection('ministerios').add({ nombre, lider, miembros: miembrosMinisterio, eventos: [] });
 
-      guardarMemoria();
-      cerrarModalCrearMinisterio();
+      guardado.then(() => cerrarModalCrearMinisterio())
+        .catch(err => alert('No se pudo guardar: ' + err.message));
     }
 
     function eliminarMinisterio(id) {
       if(confirm("¿Seguro que deseas eliminar este ministerio?")) {
-        ministerios = ministerios.filter(m => m.id !== id);
-        guardarMemoria();
+        db.collection('ministerios').doc(id).delete().catch(err => alert('No se pudo eliminar: ' + err.message));
       }
     }
 
@@ -1964,8 +2014,9 @@
       if(confirm('¿Deseas eliminar este evento/servicio?')) {
         const min = ministerios.find(m => m.id === minId);
         if(min && min.eventos) {
-          min.eventos = min.eventos.filter(e => e.id !== evId);
-          guardarMemoria();
+          const nuevosEventos = min.eventos.filter(e => e.id !== evId);
+          db.collection('ministerios').doc(minId).update({ eventos: nuevosEventos })
+            .catch(err => alert('No se pudo eliminar: ' + err.message));
         }
       }
     }
@@ -1990,29 +2041,22 @@
 
       const min = ministerios.find(m => m.id === minSeleccionadoId);
       if(min) {
-        if(!min.eventos) min.eventos = [];
+        const eventosActuales = min.eventos ? [...min.eventos] : [];
 
+        let nuevosEventos;
         if(eventoEditandoId) {
           // Edición
-          const ev = min.eventos.find(e => e.id === eventoEditandoId);
-          if(ev) {
-            ev.nombre = nombre;
-            ev.fecha = fecha;
-            ev.hora = hora;
-            ev.servidores = servidores;
-          }
+          nuevosEventos = eventosActuales.map(ev =>
+            ev.id === eventoEditandoId ? { ...ev, nombre, fecha, hora, servidores } : ev
+          );
         } else {
           // Nuevo
-          min.eventos.unshift({
-            id: Date.now(),
-            nombre,
-            fecha,
-            hora,
-            servidores
-          });
+          nuevosEventos = [{ id: Date.now(), nombre, fecha, hora, servidores }, ...eventosActuales];
         }
-        guardarMemoria();
-        cerrarModalEventoMinisterio();
+
+        db.collection('ministerios').doc(minSeleccionadoId).update({ eventos: nuevosEventos })
+          .then(() => cerrarModalEventoMinisterio())
+          .catch(err => alert('No se pudo guardar: ' + err.message));
       }
     }
 
@@ -2028,20 +2072,30 @@
     function guardarGrupoNuevo() {
       const nombre = document.getElementById('input-nombre-grupo-nuevo').value.trim();
       if (nombre && !grupos.includes(nombre)) {
-        grupos.push(nombre);
-        guardarMemoria();
-        cerrarModalCrearGrupo();
+        db.collection('configuracion').doc('grupos').set({
+          lista: firebase.firestore.FieldValue.arrayUnion(nombre)
+        }, { merge: true }).then(() => {
+          cerrarModalCrearGrupo();
+        }).catch(err => alert('No se pudo guardar: ' + err.message));
       }
     }
 
-    function eliminarGrupo(index) {
-      const grupoAEliminar = grupos[index];
-      if(confirm(`¿Deseas eliminar el grupo "${grupoAEliminar}"? Los miembros pasarán a "Sin grupo".`)) {
-        grupos.splice(index, 1);
-        miembros.forEach(m => {
-          if (m.grupo === grupoAEliminar) m.grupo = "Sin grupo";
+    async function eliminarGrupo(grupoAEliminar) {
+      if(!confirm(`¿Deseas eliminar el grupo "${grupoAEliminar}"? Los miembros pasarán a "Sin grupo".`)) return;
+
+      try {
+        const batch = db.batch();
+        batch.set(db.collection('configuracion').doc('grupos'), {
+          lista: firebase.firestore.FieldValue.arrayRemove(grupoAEliminar)
+        }, { merge: true });
+
+        miembros.filter(m => m.grupo === grupoAEliminar).forEach(m => {
+          batch.update(db.collection('miembros').doc(m.id), { grupo: 'Sin grupo' });
         });
-        guardarMemoria();
+
+        await batch.commit();
+      } catch (err) {
+        alert('No se pudo eliminar: ' + err.message);
       }
     }
 
@@ -2158,16 +2212,15 @@
         foto: tempFoto
       };
 
-      miembros.unshift(nuevo);
-      guardarMemoria();
+      db.collection('miembros').add(nuevo).then(() => {
+        document.getElementById('form-nuevo-miembro').reset();
+        tempFoto = null;
+        document.getElementById('avatar-preview').innerHTML = `<i data-lucide="user" class="w-10 h-10"></i>`;
+        lucide.createIcons();
 
-      document.getElementById('form-nuevo-miembro').reset();
-      tempFoto = null;
-      document.getElementById('avatar-preview').innerHTML = `<i data-lucide="user" class="w-10 h-10"></i>`;
-      lucide.createIcons();
-
-      switchTab('miembros');
-      alert(`¡${nuevo.nombre} ${nuevo.apellido} guardado exitosamente!`);
+        switchTab('miembros');
+        alert(`¡${nuevo.nombre} ${nuevo.apellido} guardado exitosamente!`);
+      }).catch(err => alert('No se pudo guardar: ' + err.message));
     }
 
     function renderTabla() {
@@ -2176,7 +2229,7 @@
       tbody.innerHTML = '';
 
       getMiembrosVisibles().forEach((m) => {
-        const idx = miembros.indexOf(m);
+        const idx = m.id;
         const iniciales = (m.nombre[0] + (m.apellido[0] || '')).toUpperCase();
         const avatarHTML = m.foto 
           ? `<img src="${m.foto}" class="w-8 h-8 rounded-full object-cover">`
@@ -2199,39 +2252,37 @@
           <td class="py-3.5 px-4 text-slate-500 text-xs">${m.barrio}</td>
           <td class="py-3.5 px-4 text-slate-500 text-xs">${m.ingreso}</td>
           <td class="py-3.5 px-4 text-slate-500 text-xs font-medium">
-            <select onchange="cambiarBautizadoMiembro(${idx}, this.value)" class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-1 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <select onchange="cambiarBautizadoMiembro('${idx}', this.value)" class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-1 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
               <option value="No" ${(m.bautizado === 'No' || !m.bautizado) ? 'selected' : ''}>No</option>
               <option value="Sí" ${m.bautizado === 'Sí' ? 'selected' : ''}>Sí</option>
             </select>
           </td>
           <td class="py-3.5 px-4 text-slate-500 text-xs font-medium">
-            <select onchange="cambiarGrupoMiembro(${idx}, this.value)" class="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <select onchange="cambiarGrupoMiembro('${idx}', this.value)" class="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
               <option value="Sin grupo" ${m.grupo === 'Sin grupo' ? 'selected' : ''}>Sin grupo</option>
               ${grupos.map(g => `<option value="${g}" ${m.grupo === g ? 'selected' : ''}>${g}</option>`).join('')}
             </select>
           </td>
           <td class="py-3.5 px-4"><span class="bg-emerald-50 text-emerald-600 font-medium px-2.5 py-1 rounded-full text-xs">● Activo</span></td>
-          <td class="py-3.5 px-4 text-slate-400 hover:text-red-600 cursor-pointer" onclick="eliminarMiembro(${idx})" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></td>
+          <td class="py-3.5 px-4 text-slate-400 hover:text-red-600 cursor-pointer" onclick="eliminarMiembro('${idx}')" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></td>
         `;
         tbody.appendChild(row);
       });
       lucide.createIcons();
     }
 
-    function cambiarBautizadoMiembro(idx, valor) {
-      miembros[idx].bautizado = valor;
-      guardarMemoria();
+    function cambiarBautizadoMiembro(id, valor) {
+      db.collection('miembros').doc(id).update({ bautizado: valor }).catch(err => alert('No se pudo guardar: ' + err.message));
     }
 
-    function cambiarGrupoMiembro(idx, nuevoGrupo) {
-      miembros[idx].grupo = nuevoGrupo;
-      guardarMemoria();
+    function cambiarGrupoMiembro(id, nuevoGrupo) {
+      db.collection('miembros').doc(id).update({ grupo: nuevoGrupo }).catch(err => alert('No se pudo guardar: ' + err.message));
     }
 
-    function eliminarMiembro(idx) {
-      if (confirm(`¿Seguro que deseas eliminar a ${miembros[idx].nombre}?`)) {
-        miembros.splice(idx, 1);
-        guardarMemoria();
+    function eliminarMiembro(id) {
+      const m = miembros.find(x => x.id === id);
+      if (m && confirm(`¿Seguro que deseas eliminar a ${m.nombre}?`)) {
+        db.collection('miembros').doc(id).delete().catch(err => alert('No se pudo eliminar: ' + err.message));
       }
     }
 
@@ -2381,7 +2432,7 @@
       }
     }
 
-    /* ============ AUTENTICACIÓN: LOGIN / REGISTRO / RECUPERAR CONTRASEÑA ============ */
+    /* ============ AUTENTICACIÓN: FIREBASE AUTH (LOGIN / REGISTRO / GOOGLE / RECUPERAR CONTRASEÑA) ============ */
 
     function mostrarVistaAuth(vista) {
       ['login', 'registro', 'olvide', 'pendiente', 'verificar'].forEach(v => {
@@ -2400,55 +2451,44 @@
       el.classList.remove('hidden');
     }
 
-    /* ---- Seguridad: hash de contraseñas (nunca se guardan en texto plano) ---- */
-    async function hashTexto(texto) {
-      const datos = new TextEncoder().encode(texto);
-      const buffer = await crypto.subtle.digest('SHA-256', datos);
-      return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    const MENSAJES_ERROR_FIREBASE = {
+      'auth/invalid-credential': 'Correo o contraseña incorrectos.',
+      'auth/wrong-password': 'Contraseña incorrecta.',
+      'auth/user-not-found': 'No existe una cuenta con ese correo. Podés crear una cuenta nueva.',
+      'auth/too-many-requests': 'Demasiados intentos. Esperá unos minutos e intentá de nuevo.',
+      'auth/invalid-email': 'El correo no es válido.',
+      'auth/email-already-in-use': 'Ya existe una cuenta registrada con ese correo.',
+      'auth/weak-password': 'La contraseña es muy débil, usá al menos 6 caracteres.',
+      'auth/popup-closed-by-user': null // el usuario cerró el popup de Google a propósito, no es un error real
+    };
+
+    function textoErrorFirebase(err) {
+      if (err.code in MENSAJES_ERROR_FIREBASE) return MENSAJES_ERROR_FIREBASE[err.code];
+      return err.message || 'Ocurrió un error. Intentá de nuevo.';
     }
 
-    function generarCodigoVerificacion() {
-      return String(Math.floor(100000 + Math.random() * 900000));
+    function notificarAdminNuevaSolicitud(nombre, email) {
+      if (typeof emailjs === 'undefined') return;
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        to_email: HOST_EMAIL,
+        to_name: 'Administrador',
+        message: `${nombre} (${email}) solicitó acceso a la plataforma. Ingresá a "Solicitudes pendientes" para aprobar o rechazar.`
+      }).catch(() => {});
     }
 
-    /* ---- Seguridad: freno a intentos repetidos de contraseña (fuerza bruta casera) ---- */
-    const MAX_INTENTOS_LOGIN = 5;
-    const BLOQUEO_LOGIN_MS = 5 * 60 * 1000; // 5 minutos
-    const EXPIRACION_SESION_MS = 12 * 60 * 60 * 1000; // 12 horas
-
-    function guardarIntentosLogin() {
-      localStorage.setItem('miiglesia_intentos_login', JSON.stringify(intentosLogin));
-    }
-
-    function estaLoginBloqueado(email) {
-      const registro = intentosLogin[email];
-      return !!registro && registro.bloqueadoHasta > Date.now();
-    }
-
-    function minutosDeBloqueoRestantes(email) {
-      const registro = intentosLogin[email];
-      if (!registro) return 0;
-      return Math.max(1, Math.ceil((registro.bloqueadoHasta - Date.now()) / 60000));
-    }
-
-    function registrarIntentoFallido(email) {
-      const registro = intentosLogin[email] || { intentos: 0, bloqueadoHasta: 0 };
-      registro.intentos += 1;
-      if (registro.intentos >= MAX_INTENTOS_LOGIN) {
-        registro.bloqueadoHasta = Date.now() + BLOQUEO_LOGIN_MS;
-        registro.intentos = 0;
-      }
-      intentosLogin[email] = registro;
-      guardarIntentosLogin();
-    }
-
-    function limpiarIntentosLogin(email) {
-      delete intentosLogin[email];
-      guardarIntentosLogin();
-    }
-
-    function guardarSesionActiva(user) {
-      localStorage.setItem('miiglesia_usuario_activo', JSON.stringify({ email: user.email, expira: Date.now() + EXPIRACION_SESION_MS }));
+    // Crea el documento de perfil en Firestore. La cuenta con HOST_EMAIL queda aprobada como admin
+    // automáticamente (así se auto-arranca la primera cuenta); el resto queda "pendiente" de aprobación.
+    async function crearDocUsuario(uid, nombre, email) {
+      const esAdmin = email.toLowerCase() === HOST_EMAIL.toLowerCase();
+      await db.collection('usuarios').doc(uid).set({
+        nombre,
+        email,
+        estado: esAdmin ? 'aprobado' : 'pendiente',
+        rol: esAdmin ? 'Anfitrión Súper Admin' : null,
+        liderGrupos: [],
+        liderMinisterios: []
+      });
+      if (!esAdmin) notificarAdminNuevaSolicitud(nombre, email);
     }
 
     async function iniciarSesion(event) {
@@ -2457,150 +2497,63 @@
       const pass = document.getElementById('login-password').value;
       const errorEl = document.getElementById('login-error');
 
-      if (estaLoginBloqueado(email)) {
-        mostrarErrorAuth(errorEl, `Demasiados intentos fallidos. Probá de nuevo en ${minutosDeBloqueoRestantes(email)} minuto(s).`);
-        return;
-      }
-
-      const user = usuarios.find(u => u.email.toLowerCase() === email);
-
-      if (!user) {
-        mostrarErrorAuth(errorEl, 'No existe una cuenta con ese correo. Podés crear una cuenta nueva.');
-        return;
-      }
-      if (user.estado === 'pendiente') {
-        mostrarErrorAuth(errorEl, 'Tu cuenta todavía está pendiente de aprobación por el administrador.');
-        return;
-      }
-      if (user.estado === 'rechazado') {
-        mostrarErrorAuth(errorEl, 'Tu solicitud de acceso fue rechazada. Contactá al administrador.');
-        return;
-      }
-      if (user.authGoogle && !user.passHash) {
-        mostrarErrorAuth(errorEl, 'Esta cuenta usa Google para iniciar sesión. Usá el botón "Continuar con Google".');
-        return;
-      }
-
-      // Migración de cuentas viejas que todavía tenían la contraseña en texto plano
-      if (!user.passHash && user.pass) {
-        if (user.pass !== pass) {
-          registrarIntentoFallido(email);
-          mostrarErrorAuth(errorEl, 'Contraseña incorrecta.');
+      try {
+        const cred = await auth.signInWithEmailAndPassword(email, pass);
+        if (!cred.user.emailVerified) {
+          document.getElementById('verificar-subtitulo').innerText = `Te enviamos un link de verificación a ${email}. Hacé clic ahí y después volvé a iniciar sesión.`;
+          mostrarVistaAuth('verificar');
           return;
         }
-        user.passHash = await hashTexto(pass);
-        delete user.pass;
-      } else {
-        const passIngresadoHash = await hashTexto(pass);
-        if (user.passHash !== passIngresadoHash) {
-          registrarIntentoFallido(email);
-          mostrarErrorAuth(errorEl, 'Contraseña incorrecta.');
-          return;
-        }
+        document.getElementById('login-email').value = '';
+        document.getElementById('login-password').value = '';
+        // onAuthStateChanged se encarga de revisar el estado/rol y entrar a la app
+      } catch (err) {
+        mostrarErrorAuth(errorEl, textoErrorFirebase(err));
       }
-
-      limpiarIntentosLogin(email);
-      usuarioActivo = user;
-      guardarSesionActiva(user);
-      guardarMemoria();
-      document.getElementById('login-email').value = '';
-      document.getElementById('login-password').value = '';
-      iniciarAplicacion();
     }
 
-    /* ---- Registro en dos pasos: 1) verificar que el correo es real, 2) recién ahí se crea la solicitud ---- */
-    function iniciarVerificacionCorreo(event) {
+    async function registrarConCorreo(event) {
       event.preventDefault();
       const nombre = document.getElementById('registro-nombre').value.trim();
       const email = document.getElementById('registro-email').value.trim().toLowerCase();
       const pass = document.getElementById('registro-password').value;
       const errorEl = document.getElementById('registro-error');
-
-      if (usuarios.some(u => u.email.toLowerCase() === email)) {
-        mostrarErrorAuth(errorEl, 'Ya existe una cuenta registrada con ese correo.');
-        return;
-      }
-
       const btn = document.getElementById('btn-enviar-verificacion');
+
       btn.disabled = true;
-      btn.innerText = 'Enviando código...';
+      btn.innerText = 'Creando cuenta...';
 
-      hashTexto(pass).then(passHash => {
-        registroPendienteVerificacion = {
-          nombre, email, passHash,
-          codigo: generarCodigoVerificacion(),
-          expira: Date.now() + 10 * 60 * 1000 // 10 minutos
-        };
+      try {
+        const cred = await auth.createUserWithEmailAndPassword(email, pass);
+        await cred.user.updateProfile({ displayName: nombre });
+        await cred.user.sendEmailVerification();
+        await crearDocUsuario(cred.user.uid, nombre, email);
 
-        enviarCodigoPorCorreo();
-
-        document.getElementById('verificar-subtitulo').innerText = `Te enviamos un código de 6 dígitos a ${email}`;
-        document.getElementById('verificar-codigo').value = '';
+        document.getElementById('registro-nombre').value = '';
+        document.getElementById('registro-email').value = '';
+        document.getElementById('registro-password').value = '';
+        document.getElementById('verificar-subtitulo').innerText = `Te enviamos un link de verificación a ${email}. Hacé clic ahí y después volvé a iniciar sesión.`;
         mostrarVistaAuth('verificar');
-      }).finally(() => {
+      } catch (err) {
+        mostrarErrorAuth(errorEl, textoErrorFirebase(err));
+      } finally {
         btn.disabled = false;
-        btn.innerText = 'Enviar código de verificación';
-      });
-    }
-
-    function enviarCodigoPorCorreo() {
-      if (!registroPendienteVerificacion) return;
-      const { nombre, email, codigo } = registroPendienteVerificacion;
-
-      if (typeof emailjs !== 'undefined') {
-        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-          to_email: email,
-          to_name: nombre,
-          message: `Tu código de verificación es: ${codigo}. Vence en 10 minutos.`,
-          temp_password: codigo
-        }).catch(() => {});
+        btn.innerText = 'Crear cuenta';
       }
     }
 
-    function reenviarCodigoVerificacion() {
-      if (!registroPendienteVerificacion) { mostrarVistaAuth('registro'); return; }
-      registroPendienteVerificacion.codigo = generarCodigoVerificacion();
-      registroPendienteVerificacion.expira = Date.now() + 10 * 60 * 1000;
-      enviarCodigoPorCorreo();
-      alert('Te reenviamos el código a tu correo.');
-    }
-
-    function confirmarCodigoVerificacion(event) {
-      event.preventDefault();
+    async function reenviarVerificacionEmail() {
       const errorEl = document.getElementById('verificar-error');
-      const codigoIngresado = document.getElementById('verificar-codigo').value.trim();
-
-      if (!registroPendienteVerificacion) {
-        mostrarErrorAuth(errorEl, 'Tu sesión de verificación expiró. Empezá de nuevo.');
-        mostrarVistaAuth('registro');
+      if (!auth.currentUser) {
+        mostrarErrorAuth(errorEl, 'Volvé a iniciar sesión para poder reenviar el correo.');
         return;
       }
-      if (Date.now() > registroPendienteVerificacion.expira) {
-        mostrarErrorAuth(errorEl, 'El código venció. Pedí uno nuevo.');
-        return;
+      try {
+        await auth.currentUser.sendEmailVerification();
+        alert('Te reenviamos el correo de verificación.');
+      } catch (err) {
+        mostrarErrorAuth(errorEl, textoErrorFirebase(err));
       }
-      if (codigoIngresado !== registroPendienteVerificacion.codigo) {
-        mostrarErrorAuth(errorEl, 'El código no coincide. Revisá tu correo e intentá de nuevo.');
-        return;
-      }
-
-      const { nombre, email, passHash } = registroPendienteVerificacion;
-      usuarios.push({ nombre, email, passHash, estado: 'pendiente', rol: null, correoVerificado: true, liderGrupos: [], liderMinisterios: [] });
-      guardarMemoria();
-
-      if (typeof emailjs !== 'undefined') {
-        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-          to_email: HOST_EMAIL,
-          to_name: 'Administrador',
-          message: `${nombre} (${email}) verificó su correo y solicitó acceso a la plataforma. Ingresá a "Solicitudes pendientes" para aprobar o rechazar.`
-        }).catch(() => {});
-      }
-
-      registroPendienteVerificacion = null;
-      document.getElementById('registro-nombre').value = '';
-      document.getElementById('registro-email').value = '';
-      document.getElementById('registro-password').value = '';
-      mostrarVistaAuth('pendiente');
     }
 
     async function enviarRecuperacion(event) {
@@ -2611,135 +2564,89 @@
       errorEl.classList.add('hidden');
       exitoEl.classList.add('hidden');
 
-      const user = usuarios.find(u => u.email.toLowerCase() === email);
-      if (!user) {
-        mostrarErrorAuth(errorEl, 'No existe una cuenta con ese correo.');
-        return;
+      try {
+        await auth.sendPasswordResetEmail(email);
+      } catch (err) {
+        // no revelamos si el correo existe o no, para no filtrar información de cuentas
       }
-      if (user.authGoogle && !user.passHash) {
-        mostrarErrorAuth(errorEl, 'Esta cuenta usa Google para iniciar sesión, no tiene contraseña que recuperar.');
-        return;
-      }
-
-      const tempPass = Math.random().toString(36).slice(-8);
-      user.passHash = await hashTexto(tempPass);
-      guardarMemoria();
-
-      if (typeof emailjs !== 'undefined') {
-        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-          to_email: user.email,
-          to_name: user.nombre,
-          message: `Tu nueva contraseña temporal es: ${tempPass}. Te recomendamos iniciar sesión y cambiarla cuanto antes.`,
-          temp_password: tempPass
-        }).then(() => {
-          exitoEl.innerText = 'Te enviamos un correo con tu contraseña temporal.';
-          exitoEl.classList.remove('hidden');
-        }).catch(() => {
-          exitoEl.innerText = `No pudimos enviar el correo. Tu contraseña temporal es: ${tempPass}`;
-          exitoEl.classList.remove('hidden');
-        });
-      } else {
-        exitoEl.innerText = `Tu contraseña temporal es: ${tempPass}`;
-        exitoEl.classList.remove('hidden');
-      }
-
+      exitoEl.innerText = 'Si existe una cuenta con ese correo, te enviamos un link para restablecer la contraseña.';
+      exitoEl.classList.remove('hidden');
       document.getElementById('olvide-email').value = '';
     }
 
-    /* ---- Iniciar sesión / registrarse con Google (identidad ya verificada por Google) ---- */
-    function decodificarJWT(token) {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
-      );
-      return JSON.parse(jsonPayload);
-    }
-
-    function manejarRespuestaGoogle(response) {
-      const datos = decodificarJWT(response.credential);
-      if (!datos.email_verified) {
-        alert('Tu cuenta de Google no tiene el correo verificado.');
-        return;
-      }
-
-      const email = datos.email.toLowerCase();
-      const existente = usuarios.find(u => u.email.toLowerCase() === email);
-
-      if (existente) {
-        if (existente.estado === 'pendiente') {
-          mostrarVistaAuth('pendiente');
-          return;
+    /* ---- Google Sign-In: Firebase ya verifica la identidad, no hace falta código de verificación ---- */
+    async function iniciarSesionGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        const result = await auth.signInWithPopup(provider);
+        const user = result.user;
+        const docRef = db.collection('usuarios').doc(user.uid);
+        const snap = await docRef.get();
+        if (!snap.exists) {
+          await crearDocUsuario(user.uid, user.displayName || user.email, user.email);
         }
-        if (existente.estado === 'rechazado') {
-          alert('Tu solicitud de acceso fue rechazada. Contactá al administrador.');
-          return;
-        }
-        usuarioActivo = existente;
-        guardarSesionActiva(existente);
-        guardarMemoria();
-        iniciarAplicacion();
-        return;
+        // onAuthStateChanged se encarga del resto (revisa estado/rol y entra a la app)
+      } catch (err) {
+        const mensaje = textoErrorFirebase(err);
+        if (mensaje) alert('No se pudo iniciar sesión con Google: ' + mensaje);
       }
-
-      usuarios.push({
-        nombre: datos.name || datos.email,
-        email: datos.email,
-        passHash: null,
-        authGoogle: true,
-        estado: 'pendiente',
-        rol: null,
-        correoVerificado: true,
-        liderGrupos: [],
-        liderMinisterios: []
-      });
-      guardarMemoria();
-
-      if (typeof emailjs !== 'undefined') {
-        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-          to_email: HOST_EMAIL,
-          to_name: 'Administrador',
-          message: `${datos.name || datos.email} (${datos.email}) solicitó acceso con su cuenta de Google. Ingresá a "Solicitudes pendientes" para aprobar o rechazar.`
-        }).catch(() => {});
-      }
-
-      mostrarVistaAuth('pendiente');
-    }
-
-    function inicializarGoogleSignIn() {
-      if (GOOGLE_CLIENT_ID.startsWith('TU_GOOGLE_CLIENT_ID')) return; // todavía no configuraron su Client ID real
-      if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) return;
-
-      google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: manejarRespuestaGoogle });
-
-      const contLogin = document.getElementById('google-signin-login');
-      const contRegistro = document.getElementById('google-signin-registro');
-      if (contLogin) google.accounts.id.renderButton(contLogin, { theme: 'outline', size: 'large', width: 320, text: 'continue_with' });
-      if (contRegistro) google.accounts.id.renderButton(contRegistro, { theme: 'outline', size: 'large', width: 320, text: 'continue_with' });
     }
 
     function cerrarSesion() {
-      usuarioActivo = null;
-      localStorage.removeItem('miiglesia_usuario_activo');
+      auth.signOut();
       document.querySelectorAll('.fixed.inset-0').forEach(modal => modal.classList.add('hidden'));
-      document.getElementById('app-screen').classList.add('hidden');
-      document.getElementById('auth-screen').classList.remove('hidden');
-      mostrarVistaAuth('login');
     }
 
-    function chequearSesionGuardada() {
-      const guardada = JSON.parse(localStorage.getItem('miiglesia_usuario_activo') || 'null');
-      if (guardada && guardada.expira > Date.now()) {
-        const userActual = usuarios.find(u => u.email === guardada.email && u.estado === 'aprobado');
-        if (userActual) {
-          usuarioActivo = userActual;
-          iniciarAplicacion();
+    // Se dispara solo: al cargar la página, y después de cada login/logout/registro.
+    // Reemplaza por completo al viejo sistema de "sesión guardada en localStorage".
+    auth.onAuthStateChanged(async (user) => {
+      detenerListenersFirestore();
+
+      if (!user) {
+        usuarioActivo = null;
+        document.getElementById('app-screen').classList.add('hidden');
+        document.getElementById('auth-screen').classList.remove('hidden');
+        mostrarVistaAuth('login');
+        return;
+      }
+
+      if (!user.emailVerified) {
+        document.getElementById('verificar-subtitulo').innerText = `Te enviamos un link de verificación a ${user.email}. Hacé clic ahí y después volvé a iniciar sesión.`;
+        mostrarVistaAuth('verificar');
+        return;
+      }
+
+      try {
+        const docSnap = await db.collection('usuarios').doc(user.uid).get();
+        if (!docSnap.exists) {
+          mostrarErrorAuth(document.getElementById('login-error'), 'No encontramos tu perfil. Contactá al administrador.');
+          mostrarVistaAuth('login');
+          auth.signOut();
           return;
         }
+
+        const datos = { id: user.uid, ...docSnap.data() };
+
+        if (datos.estado === 'rechazado') {
+          mostrarVistaAuth('login');
+          auth.signOut();
+          alert('Tu solicitud de acceso fue rechazada. Contactá al administrador.');
+          return;
+        }
+        if (datos.estado === 'pendiente') {
+          usuarioActivo = null;
+          mostrarVistaAuth('pendiente');
+          return;
+        }
+
+        usuarioActivo = datos;
+        iniciarListenersFirestore();
+        iniciarAplicacion();
+      } catch (err) {
+        mostrarErrorAuth(document.getElementById('login-error'), 'No se pudo cargar tu cuenta: ' + (err.message || err.code));
+        mostrarVistaAuth('login');
       }
-      localStorage.removeItem('miiglesia_usuario_activo');
-      mostrarVistaAuth('login');
-    }
+    });
 
     function iniciarAplicacion() {
       document.getElementById('auth-screen').classList.add('hidden');
@@ -2934,23 +2841,20 @@
 
       const existente = asistencias.find(a => a.tipo === scopeAsistenciaActual.tipo && a.nombre === scopeAsistenciaActual.nombre && a.fecha === fecha);
 
-      if (existente) {
-        existente.presentes = presentes;
-        existente.total = miembrosScope.length;
-      } else {
-        asistencias.push({
-          id: Date.now(),
-          tipo: scopeAsistenciaActual.tipo,
-          nombre: scopeAsistenciaActual.nombre,
-          fecha,
-          presentes,
-          total: miembrosScope.length,
-          registradoPor: usuarioActivo ? usuarioActivo.nombre : ''
-        });
-      }
+      const guardado = existente
+        ? db.collection('asistencias').doc(existente.id).update({ presentes, total: miembrosScope.length })
+        : db.collection('asistencias').add({
+            tipo: scopeAsistenciaActual.tipo,
+            nombre: scopeAsistenciaActual.nombre,
+            fecha,
+            presentes,
+            total: miembrosScope.length,
+            registradoPor: usuarioActivo ? usuarioActivo.nombre : ''
+          });
 
-      guardarMemoria();
-      alert(`Asistencia guardada: ${presentes.length} de ${miembrosScope.length} presentes.`);
+      guardado.then(() => {
+        alert(`Asistencia guardada: ${presentes.length} de ${miembrosScope.length} presentes.`);
+      }).catch(err => alert('No se pudo guardar: ' + err.message));
     }
 
     function renderHistorialAsistencia() {
@@ -2975,9 +2879,9 @@
             <td class="py-3.5 px-4 text-slate-600 text-xs">${r.presentes.length} / ${r.total}</td>
             <td class="py-3.5 px-4"><span class="${badgeClase} font-semibold px-2.5 py-1 rounded-full text-xs">${pct}%</span></td>
             <td class="py-3.5 px-4 flex items-center gap-2">
-              <button onclick="verAusentes(${r.id})" class="bg-slate-100 hover:bg-amber-50 text-slate-600 hover:text-amber-600 p-1.5 rounded-lg transition" title="Ver quién faltó"><i data-lucide="info" class="w-4 h-4"></i></button>
-              <button onclick="editarAsistencia(${r.id})" class="bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 p-1.5 rounded-lg transition" title="Editar"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-              <button onclick="eliminarAsistencia(${r.id})" class="text-slate-400 hover:text-red-600 p-1.5 transition" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              <button onclick="verAusentes('${r.id}')" class="bg-slate-100 hover:bg-amber-50 text-slate-600 hover:text-amber-600 p-1.5 rounded-lg transition" title="Ver quién faltó"><i data-lucide="info" class="w-4 h-4"></i></button>
+              <button onclick="editarAsistencia('${r.id}')" class="bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 p-1.5 rounded-lg transition" title="Editar"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+              <button onclick="eliminarAsistencia('${r.id}')" class="text-slate-400 hover:text-red-600 p-1.5 transition" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </td>
           </tr>
         `;
@@ -2995,8 +2899,7 @@
 
     function eliminarAsistencia(id) {
       if (confirm('¿Deseas eliminar este registro de asistencia?')) {
-        asistencias = asistencias.filter(a => a.id !== id);
-        guardarMemoria();
+        db.collection('asistencias').doc(id).delete().catch(err => alert('No se pudo eliminar: ' + err.message));
       }
     }
 
@@ -3113,31 +3016,29 @@
       const rol = document.getElementById('asignar-rol-select').value;
       if (!rol) return;
 
-      user.estado = 'aprobado';
-      user.rol = rol;
+      const cambios = { estado: 'aprobado', rol };
       if (rol === 'Líder') {
-        user.liderGrupos = Array.from(document.querySelectorAll('input[name="lider-grupos-check"]:checked')).map(cb => cb.value);
-        user.liderMinisterios = Array.from(document.querySelectorAll('input[name="lider-ministerios-check"]:checked')).map(cb => cb.value);
+        cambios.liderGrupos = Array.from(document.querySelectorAll('input[name="lider-grupos-check"]:checked')).map(cb => cb.value);
+        cambios.liderMinisterios = Array.from(document.querySelectorAll('input[name="lider-ministerios-check"]:checked')).map(cb => cb.value);
       } else {
-        user.liderGrupos = [];
-        user.liderMinisterios = [];
+        cambios.liderGrupos = [];
+        cambios.liderMinisterios = [];
       }
-      delete user.liderGrupo;
-      delete user.liderMinisterio;
 
       const modo = modoModalAsignarRol;
       const emailProcesado = user.email;
       const nombreProcesado = user.nombre;
       emailUsuarioEnProceso = null;
-      guardarMemoria();
-      document.getElementById('modal-asignar-rol').classList.add('hidden');
 
-      if (modo === 'aprobar') {
-        abrirModalSolicitudes();
-        alert(`La cuenta de ${nombreProcesado} (${emailProcesado}) fue aprobada como ${rol}.`);
-      } else {
-        alert(`Se actualizó la asignación de ${nombreProcesado}.`);
-      }
+      db.collection('usuarios').doc(user.id).update(cambios).then(() => {
+        document.getElementById('modal-asignar-rol').classList.add('hidden');
+        if (modo === 'aprobar') {
+          abrirModalSolicitudes();
+          alert(`La cuenta de ${nombreProcesado} (${emailProcesado}) fue aprobada como ${rol}.`);
+        } else {
+          alert(`Se actualizó la asignación de ${nombreProcesado}.`);
+        }
+      }).catch(err => alert('No se pudo guardar: ' + err.message));
     }
 
     /* ============ VISTA LÍDERES (SOLO ADMIN) ============ */
@@ -3251,7 +3152,7 @@
           .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
 
         const chips = eventosDelDia.slice(0, 3).map(ev => `
-          <div onclick="event.stopPropagation(); seleccionarDiaCalendario('${fechaStr}'); abrirModalEventoEspecial(null, ${ev.id})" class="bg-blue-100 text-blue-700 text-[10px] font-medium px-1.5 py-0.5 rounded truncate hover:bg-blue-200 transition cursor-pointer" title="${ev.titulo}">
+          <div onclick="event.stopPropagation(); seleccionarDiaCalendario('${fechaStr}'); abrirModalEventoEspecial(null, '${ev.id}')" class="bg-blue-100 text-blue-700 text-[10px] font-medium px-1.5 py-0.5 rounded truncate hover:bg-blue-200 transition cursor-pointer" title="${ev.titulo}">
             ${ev.hora ? ev.hora + ' ' : ''}${ev.titulo}
           </div>
         `).join('');
@@ -3297,7 +3198,7 @@
       lista.innerHTML = eventosDelDia.map(ev => {
         const editable = puedeEditarEvento(ev);
         return `
-          <div onclick="abrirModalEventoEspecial(null, ${ev.id})" class="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+          <div onclick="abrirModalEventoEspecial(null, '${ev.id}')" class="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
             <div class="w-1.5 self-stretch rounded-full bg-blue-500 flex-shrink-0"></div>
             <div class="flex-1 min-w-0">
               <p class="font-semibold text-slate-800 text-sm truncate">${ev.titulo}</p>
@@ -3360,28 +3261,18 @@
 
       if (!titulo || !fecha) return;
 
-      if (evExistente) {
-        evExistente.titulo = titulo;
-        evExistente.fecha = fecha;
-        evExistente.hora = hora;
-        evExistente.lugar = lugar;
-        evExistente.descripcion = descripcion;
-      } else {
-        eventosEspeciales.push({
-          id: Date.now(),
-          titulo,
-          fecha,
-          hora,
-          lugar,
-          descripcion,
-          creadoPor: usuarioActivo ? usuarioActivo.nombre : '',
-          creadoPorEmail: usuarioActivo ? usuarioActivo.email : ''
-        });
-      }
+      const guardado = evExistente
+        ? db.collection('eventosEspeciales').doc(evExistente.id).update({ titulo, fecha, hora, lugar, descripcion })
+        : db.collection('eventosEspeciales').add({
+            titulo, fecha, hora, lugar, descripcion,
+            creadoPor: usuarioActivo ? usuarioActivo.nombre : '',
+            creadoPorEmail: usuarioActivo ? usuarioActivo.email : ''
+          });
 
-      diaSeleccionadoCalendario = fecha;
-      guardarMemoria();
-      cerrarModalEventoEspecial();
+      guardado.then(() => {
+        diaSeleccionadoCalendario = fecha;
+        cerrarModalEventoEspecial();
+      }).catch(err => alert('No se pudo guardar: ' + err.message));
     }
 
     function eliminarEventoEspecial() {
@@ -3390,9 +3281,9 @@
       if (!ev || !puedeEditarEvento(ev)) return;
 
       if (confirm('¿Deseas eliminar este evento?')) {
-        eventosEspeciales = eventosEspeciales.filter(e => e.id !== eventoEspecialEditandoId);
-        guardarMemoria();
-        cerrarModalEventoEspecial();
+        db.collection('eventosEspeciales').doc(eventoEspecialEditandoId).delete()
+          .then(() => cerrarModalEventoEspecial())
+          .catch(err => alert('No se pudo eliminar: ' + err.message));
       }
     }
 
@@ -3437,8 +3328,6 @@
       }
     }
 
-    chequearSesionGuardada();
-    window.addEventListener('load', inicializarGoogleSignIn);
   </script>
 </body>
 </html>

@@ -13,7 +13,12 @@ import admin from 'firebase-admin';
 
 const TRES_ARROYOS = { lat: -38.3739, lng: -60.2761 };
 const TIMEZONE = 'America/Argentina/Buenos_Aires';
-const BASES = { viernes: 40, sabado: 60, domingoManana: 250, domingoNoche: 250 };
+
+// No hay un conteo real de asistencia, así que no mostramos un número:
+// mostramos una TENDENCIA ("más/menos/similar a lo habitual"). Estos valores
+// aproximados solo se usan como contexto para que la IA calibre su criterio.
+const ASISTENCIA_HABITUAL = { viernes: 60, sabado: 60, domingoManana: 200, domingoNoche: 300 };
+const ETIQUETAS_DIA = { viernes: 'viernes', sabado: 'sábado', domingoManana: 'domingo a la mañana', domingoNoche: 'domingo a la noche' };
 
 const ZONAS_FALLBACK = [
   { nombre: 'Plaza San Martín', lat: -38.3745, lng: -60.2758, horario: '18:00 - 20:30', motivo: 'Plaza céntrica, paseo habitual de fin de semana' },
@@ -56,26 +61,17 @@ async function obtenerClimaSemana() {
   }));
 }
 
-function factorClima(probLluvia) {
-  if (probLluvia >= 60) return 0.75;
-  if (probLluvia >= 30) return 0.9;
-  if (probLluvia <= 5) return 1.05;
-  return 1.0;
+function tendenciaPorClima(probLluvia) {
+  if (probLluvia >= 60) return { tendencia: 'menos', mensaje: 'Alta probabilidad de lluvia: es probable que asistan menos personas de lo habitual.' };
+  if (probLluvia >= 30) return { tendencia: 'menos', mensaje: 'Hay chance de lluvia: podrían venir algunas personas menos de lo habitual.' };
+  if (probLluvia <= 5) return { tendencia: 'mas', mensaje: 'Buen clima despejado: es probable que asistan más personas de lo habitual.' };
+  return { tendencia: 'normal', mensaje: 'Clima estable: se espera una asistencia similar a la habitual.' };
 }
 
-function motivoClima(probLluvia) {
-  if (probLluvia >= 60) return 'Alta probabilidad de lluvia, puede bajar la asistencia';
-  if (probLluvia >= 30) return 'Chance de lluvia, leve ajuste a la baja';
-  if (probLluvia <= 5) return 'Buen clima, sin lluvia a la vista';
-  return 'Clima estable, similar a un día normal';
-}
-
-function calcularDiaEstimado(base, clima) {
-  const factor = factorClima(clima.probLluvia);
+function calcularDiaTendencia(clima) {
   return {
-    estimado: Math.round(base * factor),
+    ...tendenciaPorClima(clima.probLluvia),
     clima: { descripcion: clima.descripcion, tempMax: clima.tempMax, probLluvia: clima.probLluvia },
-    motivo: motivoClima(clima.probLluvia),
   };
 }
 
@@ -97,13 +93,15 @@ async function generarSemanal(db) {
   const clima = await obtenerClimaSemana();
   const [climaViernes, climaSabado, climaDomingo] = clima;
 
-  const dias = {
-    viernes: calcularDiaEstimado(BASES.viernes, climaViernes),
-    sabado: calcularDiaEstimado(BASES.sabado, climaSabado),
-    domingoManana: calcularDiaEstimado(BASES.domingoManana, climaDomingo),
-    domingoNoche: calcularDiaEstimado(BASES.domingoNoche, climaDomingo),
+  // Base determinada solo por clima — siempre disponible, sin costo.
+  const diasClima = {
+    viernes: calcularDiaTendencia(climaViernes),
+    sabado: calcularDiaTendencia(climaSabado),
+    domingoManana: calcularDiaTendencia(climaDomingo),
+    domingoNoche: calcularDiaTendencia(climaDomingo),
   };
 
+  let dias = diasClima;
   let evangelismo = null;
   let estado = 'pendiente';
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -113,40 +111,79 @@ async function generarSemanal(db) {
       const { default: Anthropic } = await import('@anthropic-ai/sdk');
       const anthropic = new Anthropic({ apiKey });
       const candidatos = clima.filter((_, i) => i !== 2).map((c) => c.fecha); // toda la semana menos el domingo
-      const prompt = `Sos un asistente que ayuda a una iglesia evangélica ("Casa De Dios") en Tres Arroyos, Argentina, a planificar salidas de evangelismo callejero.
-Buscá noticias y eventos locales recientes de Tres Arroyos para la semana del ${clima[0].fecha} al ${clima[6].fecha} (ferias, fiestas patronales, eventos deportivos, clima).
-Con esa información, elegí UNA fecha de esta lista como la mejor para salir a evangelizar en lugares PÚBLICOS: ${candidatos.join(', ')}.
-Sugerí también 2 o 3 zonas públicas reales de Tres Arroyos (plazas, veredas céntricas, parques, costanera — NUNCA lugares privados como canchas de fútbol privadas o clubes) con el horario aproximado de mayor circulación de gente y sus coordenadas geográficas aproximadas (latitud/longitud).
-Si no encontrás noticias específicas de esa semana, basate en el conocimiento general de la ciudad, el calendario y el clima. No inventes eventos que no existan.`;
+      const contextoHabitual = Object.entries(ASISTENCIA_HABITUAL)
+        .map(([clave, n]) => `${ETIQUETAS_DIA[clave]}: unas ${n} personas`).join('; ');
+      const contextoClima = Object.entries(diasClima)
+        .map(([clave, d]) => `${ETIQUETAS_DIA[clave]} (${d.clima.descripcion}, ${d.clima.probLluvia}% de lluvia): tendencia solo por clima = "${d.tendencia}"`).join('. ');
+      const prompt = `Sos un asistente que ayuda a una iglesia evangélica ("Casa De Dios") en Tres Arroyos, Argentina.
+Asistencia habitual aproximada por franja: ${contextoHabitual}.
+Tendencia calculada solo por el clima de esta semana: ${contextoClima}.
+
+Tarea 1 — Asistencia: para viernes, sábado, domingo a la mañana y domingo a la noche de esta semana, buscá noticias y eventos locales de Tres Arroyos (ferias, fiestas patronales, eventos deportivos, feriados) que puedan influir en la asistencia, además del clima ya calculado. Para cada una de las 4 franjas, indicá una tendencia ("mas", "menos" o "normal") respecto a lo habitual y un mensaje corto explicando por qué. Si no encontrás nada relevante más allá del clima, mantené la tendencia igual a la calculada por clima.
+
+Tarea 2 — Evangelismo: buscá noticias y eventos locales de Tres Arroyos para la semana del ${clima[0].fecha} al ${clima[6].fecha}. Con esa información, elegí UNA fecha de esta lista como la mejor para salir a evangelizar en lugares PÚBLICOS: ${candidatos.join(', ')}. Sugerí también 2 o 3 zonas públicas reales de Tres Arroyos (plazas, veredas céntricas, parques, costanera — NUNCA lugares privados como canchas de fútbol privadas o clubes) con el horario aproximado de mayor circulación de gente y sus coordenadas geográficas aproximadas (latitud/longitud).
+
+Si no encontrás información específica, basate en el conocimiento general de la ciudad, el calendario y el clima. No inventes eventos que no existan.`;
+      const schemaDia = {
+        type: 'object',
+        properties: {
+          tendencia: { type: 'string', enum: ['mas', 'menos', 'normal'] },
+          mensaje: { type: 'string' },
+        },
+        required: ['tendencia', 'mensaje'],
+        additionalProperties: false,
+      };
       const schema = {
         type: 'object',
         properties: {
-          mejorDia: { type: 'string', description: 'Una de las fechas candidatas, en formato legible en español (ej: "Sábado 9 de agosto")' },
-          motivo: { type: 'string' },
-          zonas: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                nombre: { type: 'string' },
-                lat: { type: 'number' },
-                lng: { type: 'number' },
-                horario: { type: 'string' },
-                motivo: { type: 'string' },
+          diasAjuste: {
+            type: 'object',
+            properties: { viernes: schemaDia, sabado: schemaDia, domingoManana: schemaDia, domingoNoche: schemaDia },
+            required: ['viernes', 'sabado', 'domingoManana', 'domingoNoche'],
+            additionalProperties: false,
+          },
+          evangelismo: {
+            type: 'object',
+            properties: {
+              mejorDia: { type: 'string', description: 'Una de las fechas candidatas, en formato legible en español (ej: "Sábado 9 de agosto")' },
+              motivo: { type: 'string' },
+              zonas: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    nombre: { type: 'string' },
+                    lat: { type: 'number' },
+                    lng: { type: 'number' },
+                    horario: { type: 'string' },
+                    motivo: { type: 'string' },
+                  },
+                  required: ['nombre', 'lat', 'lng', 'horario', 'motivo'],
+                  additionalProperties: false,
+                },
               },
-              required: ['nombre', 'lat', 'lng', 'horario', 'motivo'],
-              additionalProperties: false,
             },
+            required: ['mejorDia', 'motivo', 'zonas'],
+            additionalProperties: false,
           },
         },
-        required: ['mejorDia', 'motivo', 'zonas'],
+        required: ['diasAjuste', 'evangelismo'],
         additionalProperties: false,
       };
-      evangelismo = await generarConIA(anthropic, 'claude-sonnet-5', prompt, schema);
+      const resultado = await generarConIA(anthropic, 'claude-sonnet-5', prompt, schema);
+      // Conservamos el objeto "clima" (viene de Open-Meteo) y usamos la tendencia/mensaje de la IA.
+      dias = {
+        viernes: { ...diasClima.viernes, ...resultado.diasAjuste.viernes },
+        sabado: { ...diasClima.sabado, ...resultado.diasAjuste.sabado },
+        domingoManana: { ...diasClima.domingoManana, ...resultado.diasAjuste.domingoManana },
+        domingoNoche: { ...diasClima.domingoNoche, ...resultado.diasAjuste.domingoNoche },
+      };
+      evangelismo = resultado.evangelismo;
       estado = 'ok';
     } catch (err) {
       console.error('Falló el análisis con IA:', err.message);
       estado = 'sin_saldo';
+      dias = diasClima;
     }
   }
 

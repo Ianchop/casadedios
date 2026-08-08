@@ -3794,13 +3794,17 @@
               <p class="text-sm text-slate-400 mt-3">Sin datos todavía</p>
             </div>`;
         }
+        const tendenciaInfo = {
+          mas: { icono: '📈', etiqueta: 'Más personas de lo habitual', color: 'text-emerald-600' },
+          menos: { icono: '📉', etiqueta: 'Menos personas de lo habitual', color: 'text-amber-600' },
+          normal: { icono: '➖', etiqueta: 'Asistencia habitual', color: 'text-slate-500' },
+        }[d.tendencia] || { icono: '➖', etiqueta: 'Sin datos suficientes', color: 'text-slate-400' };
         return `
           <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
             <p class="text-xs font-semibold text-slate-400 uppercase">${info.icono} ${info.titulo}</p>
-            <h3 class="text-3xl font-bold text-slate-800 mt-2">${d.estimado != null ? d.estimado : '—'}</h3>
-            <p class="text-[11px] text-slate-400">personas estimadas</p>
+            <h3 class="text-lg font-bold mt-2 ${tendenciaInfo.color}">${tendenciaInfo.icono} ${tendenciaInfo.etiqueta}</h3>
+            ${d.mensaje ? `<p class="text-sm text-slate-600 mt-1">${d.mensaje}</p>` : ''}
             ${d.clima ? `<p class="text-xs text-slate-500 mt-3">🌤️ ${d.clima.descripcion || ''} · ${d.clima.tempMax != null ? Math.round(d.clima.tempMax) + '°' : ''}${d.clima.probLluvia != null ? ' · ' + d.clima.probLluvia + '% lluvia' : ''}</p>` : ''}
-            ${d.motivo ? `<p class="text-xs text-slate-400 mt-2">${d.motivo}</p>` : ''}
           </div>`;
       }).join('');
     }

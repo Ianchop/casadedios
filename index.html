@@ -1212,6 +1212,56 @@
           <p id="pronostico-mensual-resumen" class="text-sm text-slate-600">Todavía no se generó el pronóstico de este mes. Se genera automáticamente el día 1 de cada mes.</p>
           <div id="lista-mensual-dias" class="space-y-2 mt-3"></div>
         </div>
+
+        <!-- EVENTOS Y CAMPAÑAS DE EVANGELISMO: se pueden cargar para cualquier fecha del año.
+             Cada uno dispara un análisis con IA (clima si está dentro de rango, contexto local,
+             feriados, temporada) que corre automáticamente dentro de la hora siguiente. -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+          <div class="flex items-center justify-between gap-3 mb-1">
+            <div>
+              <h3 class="font-bold text-slate-800">Eventos y campañas</h3>
+              <p class="text-xs text-slate-400 mt-1">Cargá una campaña o evento puntual (cualquier mes) y la IA analiza la expectativa de asistencia.</p>
+            </div>
+            <button id="btn-nuevo-evento-evangelismo" onclick="abrirModalEventoEvangelismo()" class="hidden bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 transition flex-shrink-0">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nuevo evento
+            </button>
+          </div>
+          <div id="lista-eventos-evangelismo" class="space-y-3 mt-4"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL NUEVO EVENTO DE EVANGELISMO -->
+    <div id="modal-evento-evangelismo" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800">Nuevo evento de evangelismo</h3>
+          <p class="text-xs text-slate-400 mt-1">La IA va a analizar la expectativa de asistencia dentro de la próxima hora. Cada análisis tiene un costo aproximado de unos centavos de dólar.</p>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-medium text-slate-500">Título</label>
+            <input type="text" id="evento-evangelismo-titulo" placeholder="Ej: Campaña de evangelismo en la Fiesta del Trigo" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-medium text-slate-500">Fecha inicio</label>
+              <input type="date" id="evento-evangelismo-fecha-inicio" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-600">
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500">Fecha fin</label>
+              <input type="date" id="evento-evangelismo-fecha-fin" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-600">
+            </div>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-500">Lugar</label>
+            <input type="text" id="evento-evangelismo-lugar" placeholder="Ej: Predio de la Fiesta del Trigo" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="cerrarModalEventoEvangelismo()" class="flex-1 border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">Cancelar</button>
+          <button onclick="guardarEventoEvangelismo()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold">Guardar</button>
+        </div>
       </div>
     </div>
 
@@ -1265,6 +1315,9 @@
     let pronosticoSemanal = null;
     let pronosticoMensual = null;
     let mapaEvangelismoInstancia = null;
+    // eventosEvangelismo: campañas/eventos puntuales cargados por el admin para cualquier fecha del
+    // año; un script automático (corre cada hora) analiza los "pendiente" y les agrega "analisis".
+    let eventosEvangelismo = [];
 
     let tempFoto = null;
     let minSeleccionadoId = null;
@@ -1417,6 +1470,15 @@
             if (d.id === 'semanal') pronosticoSemanal = d.data();
             if (d.id === 'mensual') pronosticoMensual = d.data();
           });
+          if (document.getElementById('view-pronostico') && !document.getElementById('view-pronostico').classList.contains('hidden')) {
+            renderPronostico();
+          }
+        }, () => {})
+      );
+
+      listenersFirestoreActivos.push(
+        db.collection('eventosEvangelismo').onSnapshot(snap => {
+          eventosEvangelismo = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           if (document.getElementById('view-pronostico') && !document.getElementById('view-pronostico').classList.contains('hidden')) {
             renderPronostico();
           }
@@ -3862,6 +3924,102 @@
           </div>
         `).join('');
       }
+
+      renderEventosEvangelismo();
+    }
+
+    /* ============ EVENTOS Y CAMPAÑAS DE EVANGELISMO (cualquier fecha, análisis IA on-demand) ============ */
+
+    function renderEventosEvangelismo() {
+      const btnNuevo = document.getElementById('btn-nuevo-evento-evangelismo');
+      const cont = document.getElementById('lista-eventos-evangelismo');
+      if (!cont) return;
+
+      const esAdmin = !!usuarioActivo && usuarioActivo.rol === 'Anfitrión Súper Admin';
+      if (btnNuevo) btnNuevo.classList.toggle('hidden', !esAdmin);
+
+      if (!eventosEvangelismo.length) {
+        cont.innerHTML = '<p class="text-sm text-slate-400">Todavía no cargaste ningún evento.</p>';
+        return;
+      }
+
+      const expectativaInfo = {
+        alta: { icono: '🟢', etiqueta: 'Expectativa alta', color: 'text-emerald-600' },
+        media: { icono: '🟡', etiqueta: 'Expectativa media', color: 'text-amber-600' },
+        baja: { icono: '🔴', etiqueta: 'Expectativa baja', color: 'text-red-500' },
+      };
+
+      const ordenados = [...eventosEvangelismo].sort((a, b) => (a.fechaInicio || '').localeCompare(b.fechaInicio || ''));
+
+      cont.innerHTML = ordenados.map(ev => {
+        const rango = ev.fechaFin && ev.fechaFin !== ev.fechaInicio ? `${ev.fechaInicio} al ${ev.fechaFin}` : ev.fechaInicio;
+        let cuerpoAnalisis = '';
+        if (ev.estado === 'analizado' && ev.analisis) {
+          const info = expectativaInfo[ev.analisis.expectativa] || { icono: '⚪', etiqueta: 'Sin datos', color: 'text-slate-500' };
+          cuerpoAnalisis = `
+            <p class="text-sm font-bold mt-2 ${info.color}">${info.icono} ${info.etiqueta}</p>
+            <p class="text-sm text-slate-600 mt-1">${ev.analisis.mensaje || ''}</p>
+            <p class="text-[11px] text-slate-400 mt-2">💵 Esta consulta con IA costó aproximadamente $0.03 a $0.08 USD.</p>`;
+        } else if (ev.estado === 'sin_saldo') {
+          cuerpoAnalisis = `<p class="text-sm text-amber-600 mt-2">⚠️ No se pudo analizar por falta de saldo en la cuenta de IA.</p>`;
+        } else {
+          cuerpoAnalisis = `<p class="text-sm text-slate-400 mt-2">⏳ Analizando... el resultado aparece automáticamente en menos de una hora.</p>`;
+        }
+        return `
+          <div class="border border-slate-200/80 rounded-xl p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="font-semibold text-slate-800">${ev.titulo}</p>
+                <p class="text-xs text-slate-400 mt-0.5">📅 ${rango}${ev.lugar ? ' · 📍 ' + ev.lugar : ''}</p>
+              </div>
+              ${esAdmin ? `<button onclick="eliminarEventoEvangelismo('${ev.id}')" class="text-slate-300 hover:text-red-600 transition flex-shrink-0" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+            </div>
+            ${cuerpoAnalisis}
+          </div>`;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function abrirModalEventoEvangelismo() {
+      document.getElementById('evento-evangelismo-titulo').value = '';
+      document.getElementById('evento-evangelismo-fecha-inicio').value = '';
+      document.getElementById('evento-evangelismo-fecha-fin').value = '';
+      document.getElementById('evento-evangelismo-lugar').value = '';
+      document.getElementById('modal-evento-evangelismo').classList.remove('hidden');
+      document.getElementById('modal-evento-evangelismo').classList.add('flex');
+    }
+
+    function cerrarModalEventoEvangelismo() {
+      document.getElementById('modal-evento-evangelismo').classList.add('hidden');
+      document.getElementById('modal-evento-evangelismo').classList.remove('flex');
+    }
+
+    function guardarEventoEvangelismo() {
+      const titulo = document.getElementById('evento-evangelismo-titulo').value.trim();
+      const fechaInicio = document.getElementById('evento-evangelismo-fecha-inicio').value;
+      const fechaFin = document.getElementById('evento-evangelismo-fecha-fin').value || fechaInicio;
+      const lugar = document.getElementById('evento-evangelismo-lugar').value.trim();
+
+      if (!titulo || !fechaInicio) {
+        alert('Completá al menos el título y la fecha de inicio.');
+        return;
+      }
+
+      db.collection('eventosEvangelismo').add({
+        titulo, fechaInicio, fechaFin, lugar,
+        estado: 'pendiente',
+        analisis: null,
+        creadoPor: usuarioActivo ? usuarioActivo.nombre : '',
+        creadoPorEmail: usuarioActivo ? usuarioActivo.email : '',
+        creadoEn: new Date().toISOString(),
+      }).then(() => cerrarModalEventoEvangelismo())
+        .catch(err => alert('No se pudo guardar: ' + err.message));
+    }
+
+    function eliminarEventoEvangelismo(id) {
+      if (!confirm('¿Eliminar este evento?')) return;
+      db.collection('eventosEvangelismo').doc(id).delete()
+        .catch(err => alert('No se pudo eliminar: ' + err.message));
     }
 
     function renderMapaEvangelismo(zonas) {

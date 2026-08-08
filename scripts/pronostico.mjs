@@ -2,6 +2,8 @@
 // Se ejecuta automáticamente vía GitHub Actions (ver .github/workflows/pronostico.yml):
 //   - Todos los viernes a la mañana: `node pronostico.mjs semanal`
 //   - El día 1 de cada mes:          `node pronostico.mjs mensual`
+//   - Cada hora:                     `node pronostico.mjs eventos` (analiza eventos/campañas
+//                                     de evangelismo cargados a mano, para cualquier fecha)
 //
 // Usa Open-Meteo (gratis, sin clave) para el clima y, si hay saldo configurado,
 // la API de Anthropic (con búsqueda web) para sugerir el mejor día/zonas de
@@ -277,15 +279,92 @@ Sugerí entre 3 y 5 fechas específicas de ese mes (excluyendo domingos) que par
   console.log('Pronóstico mensual guardado. Estado:', estado);
 }
 
+// Si la fecha cae dentro de los próximos ~16 días, Open-Meteo puede darnos un
+// pronóstico real; si es más lejana (cualquier mes del año), no hay pronóstico
+// de clima posible y la IA se apoya solo en su conocimiento estacional/de noticias.
+async function obtenerClimaParaFecha(fechaISO) {
+  const hoy = new Date();
+  const objetivo = new Date(fechaISO + 'T00:00:00');
+  const diffDias = Math.round((objetivo - hoy) / (1000 * 60 * 60 * 24));
+  if (diffDias < 0 || diffDias > 15) return null;
+
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${TRES_ARROYOS.lat}&longitude=${TRES_ARROYOS.lng}` +
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
+    `&timezone=${encodeURIComponent(TIMEZONE)}&forecast_days=16`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const d = data.daily;
+  const idx = d.time.indexOf(fechaISO);
+  if (idx === -1) return null;
+  return {
+    descripcion: WMO[d.weather_code[idx]] || 'Clima variable',
+    tempMax: d.temperature_2m_max[idx],
+    probLluvia: d.precipitation_probability_max[idx],
+  };
+}
+
+async function generarEventos(db) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const snap = await db.collection('eventosEvangelismo').where('estado', '==', 'pendiente').get();
+  if (snap.empty) {
+    console.log('No hay eventos de evangelismo pendientes de analizar.');
+    return;
+  }
+  if (!apiKey) {
+    console.log(`Hay ${snap.size} evento(s) pendiente(s), pero falta ANTHROPIC_API_KEY. Quedan sin analizar por ahora.`);
+    return;
+  }
+
+  const { default: Anthropic } = await import('@anthropic-ai/sdk');
+  const anthropic = new Anthropic({ apiKey });
+
+  const schema = {
+    type: 'object',
+    properties: {
+      expectativa: { type: 'string', enum: ['alta', 'media', 'baja'] },
+      mensaje: { type: 'string' },
+    },
+    required: ['expectativa', 'mensaje'],
+    additionalProperties: false,
+  };
+
+  for (const doc of snap.docs) {
+    const ev = doc.data();
+    try {
+      const clima = await obtenerClimaParaFecha(ev.fechaInicio);
+      const contextoClima = clima
+        ? `Pronóstico del clima disponible para el ${ev.fechaInicio}: ${clima.descripcion}, ${Math.round(clima.tempMax)}°C, ${clima.probLluvia}% de probabilidad de lluvia.`
+        : `La fecha está fuera del rango de pronóstico del clima (más de 16 días); basate en el conocimiento estacional típico de esa época del año en Tres Arroyos, Argentina.`;
+      const prompt = `Sos un asistente que ayuda a una iglesia evangélica ("Casa De Dios") en Tres Arroyos, Argentina, a evaluar una campaña o evento de evangelismo público.
+Evento: "${ev.titulo}"
+Lugar: ${ev.lugar || 'no especificado'}
+Fechas: del ${ev.fechaInicio} al ${ev.fechaFin || ev.fechaInicio}
+${contextoClima}
+
+Buscá noticias locales de Tres Arroyos, el contexto estacional para esas fechas, feriados, otros eventos que puedan competir o sumar público, y cualquier información relevante sobre "${ev.lugar}" si es un predio o lugar conocido de la ciudad (por ejemplo, si coincide con una fiesta o feria tradicional del lugar).
+Con toda esa información, evaluá la expectativa de asistencia para este evento (alta, media o baja) y escribí un mensaje breve (3 a 4 frases) explicando tu análisis y, si corresponde, alguna recomendación práctica.`;
+
+      const analisis = await generarConIA(anthropic, 'claude-sonnet-5', prompt, schema);
+      await doc.ref.update({ estado: 'analizado', analisis: { ...analisis, generadoEn: new Date().toISOString().split('T')[0] } });
+      console.log(`Evento "${ev.titulo}" analizado: ${analisis.expectativa}`);
+    } catch (err) {
+      console.error(`Falló el análisis del evento "${ev.titulo}":`, err.message);
+      await doc.ref.update({ estado: 'sin_saldo' }).catch(() => {});
+    }
+  }
+}
+
 async function main() {
   const modo = process.argv[2];
-  if (modo !== 'semanal' && modo !== 'mensual') {
-    console.error('Uso: node pronostico.mjs <semanal|mensual>');
+  if (modo !== 'semanal' && modo !== 'mensual' && modo !== 'eventos') {
+    console.error('Uso: node pronostico.mjs <semanal|mensual|eventos>');
     process.exit(1);
   }
   const db = initFirebase();
   if (modo === 'semanal') await generarSemanal(db);
-  else await generarMensual(db);
+  else if (modo === 'mensual') await generarMensual(db);
+  else await generarEventos(db);
 }
 
 main().catch((err) => {

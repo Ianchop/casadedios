@@ -130,5 +130,15 @@ service cloud.firestore {
       allow create: if isAdmin() || esLider();
       allow update, delete: if isAdmin() || resource.data.creadoPorEmail == request.auth.token.email;
     }
+
+    // Eventos/campañas de evangelismo (cualquier fecha del año): solo el admin los carga y borra,
+    // porque cada uno dispara un análisis con IA que tiene un costo real. El campo "analisis" y
+    // "estado" los completa el script automático (GitHub Actions) con una cuenta de administrador,
+    // que no pasa por estas reglas.
+    match /eventosEvangelismo/{id} {
+      allow read: if estaAprobado();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin();
+    }
   }
 }

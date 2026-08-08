@@ -6,6 +6,9 @@ on:
     - cron: '0 12 * * 5'
     # Día 1 de cada mes, 09:00 hora Argentina = 12:00 UTC
     - cron: '0 12 1 * *'
+    # Cada hora: revisa si hay eventos/campañas de evangelismo pendientes de analizar.
+    # No cuesta nada si no hay ninguno pendiente (el script se corta enseguida).
+    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       modo:
@@ -16,6 +19,7 @@ on:
         options:
           - semanal
           - mensual
+          - eventos
 
 jobs:
   generar:
@@ -38,6 +42,8 @@ jobs:
             echo "valor=${{ inputs.modo }}" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "0 12 1 * *" ]; then
             echo "valor=mensual" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 * * * *" ]; then
+            echo "valor=eventos" >> "$GITHUB_OUTPUT"
           else
             echo "valor=semanal" >> "$GITHUB_OUTPUT"
           fi

@@ -78,14 +78,14 @@ function calcularDiaTendencia(clima) {
 async function generarConIA(anthropic, model, prompt, schema) {
   const response = await anthropic.messages.create({
     model,
-    max_tokens: 2048,
+    max_tokens: 8192,
     tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }],
     output_config: { format: { type: 'json_schema', schema } },
     messages: [{ role: 'user', content: prompt }],
   });
   if (response.stop_reason === 'refusal') throw new Error('La IA rechazó la consulta');
   const textBlock = response.content.find((b) => b.type === 'text');
-  if (!textBlock) throw new Error('La IA no devolvió una respuesta de texto');
+  if (!textBlock) throw new Error(`La IA no devolvió una respuesta de texto (stop_reason: ${response.stop_reason})`);
   return JSON.parse(textBlock.text);
 }
 

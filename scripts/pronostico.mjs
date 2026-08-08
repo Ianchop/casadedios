@@ -15,7 +15,8 @@ import admin from 'firebase-admin';
 
 const TRES_ARROYOS = { lat: -38.3739, lng: -60.2761 };
 const TIMEZONE = 'America/Argentina/Buenos_Aires';
-const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+const USAR_BUSQUEDA_WEB = false; // DIAGNÓSTICO TEMPORAL: probar si el 429 es por la herramienta de búsqueda
 
 // No hay un conteo real de asistencia, así que no mostramos un número:
 // mostramos una TENDENCIA ("más/menos/similar a lo habitual"). Estos valores
@@ -79,12 +80,13 @@ function calcularDiaTendencia(clima) {
 }
 
 async function generarConIA(ai, prompt, schema) {
-  const interaction = await ai.interactions.create({
+  const params = {
     model: GEMINI_MODEL,
     input: prompt,
-    tools: [{ type: 'google_search' }],
     response_format: { type: 'text', mime_type: 'application/json', schema },
-  });
+  };
+  if (USAR_BUSQUEDA_WEB) params.tools = [{ type: 'google_search' }];
+  const interaction = await ai.interactions.create(params);
   if (!interaction.output_text) throw new Error('La IA no devolvió una respuesta de texto');
   return JSON.parse(interaction.output_text);
 }

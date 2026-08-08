@@ -1,0 +1,50 @@
+name: Pronóstico automático
+
+on:
+  schedule:
+    # Todos los viernes 09:00 hora Argentina (UTC-3) = 12:00 UTC
+    - cron: '0 12 * * 5'
+    # Día 1 de cada mes, 09:00 hora Argentina = 12:00 UTC
+    - cron: '0 12 1 * *'
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'Qué pronóstico generar'
+        required: true
+        default: 'semanal'
+        type: choice
+        options:
+          - semanal
+          - mensual
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias
+        working-directory: scripts
+        run: npm install
+
+      - name: Determinar modo según qué cron disparó la ejecución
+        id: modo
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "valor=${{ inputs.modo }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 12 1 * *" ]; then
+            echo "valor=mensual" >> "$GITHUB_OUTPUT"
+          else
+            echo "valor=semanal" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generar pronóstico
+        working-directory: scripts
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node pronostico.mjs ${{ steps.modo.outputs.valor }}

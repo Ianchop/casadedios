@@ -11,6 +11,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Leaflet (mapa gratuito con OpenStreetMap, sin necesidad de clave de API) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- EMAILJS SDK (solo para el aviso al admin de nuevas solicitudes) -->
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
   <!-- FIREBASE (autenticación + base de datos en la nube, compartida entre todos los dispositivos) -->
@@ -191,6 +194,9 @@
         <button onclick="switchTab('eventos')" id="nav-eventos" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
           <i data-lucide="calendar" class="w-5 h-5"></i> Eventos
         </button>
+        <button onclick="switchTab('pronostico')" id="nav-pronostico" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition">
+          <i data-lucide="cloud-sun" class="w-5 h-5"></i> Pronóstico
+        </button>
       </nav>
     </div>
 
@@ -243,7 +249,7 @@
           <i data-lucide="clock" class="w-4 h-4"></i> Solicitudes pendientes: <span id="cnt-solicitudes">0</span>
         </button>
         <span class="bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-blue-100">
-          <i data-lucide="rocket" class="w-4 h-4"></i> Módulos: 9/9 Activos
+          <i data-lucide="rocket" class="w-4 h-4"></i> Módulos: 10/10 Activos
         </span>
       </div>
     </div>
@@ -1159,6 +1165,56 @@
       </div>
     </div>
 
+    <!-- VISTA: PRONÓSTICO -->
+    <div id="view-pronostico" class="tab-content hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-1.5 flex gap-1.5 w-fit">
+        <button id="btn-sub-pronostico-asistencia" onclick="mostrarSubPronostico('asistencia')" class="px-4 py-2 rounded-xl text-sm font-semibold transition bg-blue-600 text-white">Asistencia</button>
+        <button id="btn-sub-pronostico-evangelismo" onclick="mostrarSubPronostico('evangelismo')" class="px-4 py-2 rounded-xl text-sm font-semibold transition text-slate-600 hover:bg-slate-100">Evangelismo</button>
+      </div>
+
+      <!-- SUB-VISTA: ASISTENCIA ESTIMADA -->
+      <div id="sub-pronostico-asistencia" class="space-y-4">
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+          <p class="text-xs text-slate-400">Última actualización automática</p>
+          <p id="pronostico-asistencia-fecha" class="font-bold text-slate-800">Todavía no se generó ningún pronóstico</p>
+        </div>
+        <div id="pronostico-asistencia-aviso" class="hidden bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-2xl p-4 flex items-center gap-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0"></i>
+          <span id="pronostico-asistencia-aviso-texto"></span>
+        </div>
+        <div id="tarjetas-pronostico-asistencia" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+      </div>
+
+      <!-- SUB-VISTA: EVANGELISMO -->
+      <div id="sub-pronostico-evangelismo" class="hidden space-y-4">
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+          <p class="text-xs text-slate-400">Mejor día de esta semana para salir a evangelizar</p>
+          <p id="pronostico-evangelismo-dia" class="text-2xl font-bold text-slate-800 mt-1">—</p>
+          <p id="pronostico-evangelismo-motivo" class="text-sm text-slate-500 mt-1"></p>
+        </div>
+        <div id="pronostico-evangelismo-aviso" class="hidden bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-2xl p-4 flex items-center gap-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0"></i>
+          <span id="pronostico-evangelismo-aviso-texto"></span>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <div class="p-5 pb-3">
+            <h3 class="font-bold text-slate-800">Zonas públicas sugeridas</h3>
+            <p class="text-xs text-slate-400 mt-1">Recomendaciones razonadas por IA a partir de noticias y eventos — no son datos medidos en tiempo real.</p>
+          </div>
+          <div id="mapa-evangelismo" class="h-80 w-full"></div>
+          <div id="lista-zonas-evangelismo" class="p-5 pt-4 space-y-2"></div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <h3 class="font-bold text-slate-800">Pronóstico del mes</h3>
+            <span id="pronostico-mensual-titulo" class="text-xs font-semibold text-slate-400"></span>
+          </div>
+          <p id="pronostico-mensual-resumen" class="text-sm text-slate-600">Todavía no se generó el pronóstico de este mes. Se genera automáticamente el día 1 de cada mes.</p>
+          <div id="lista-mensual-dias" class="space-y-2 mt-3"></div>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   </div><!-- /#app-screen -->
@@ -1205,6 +1261,10 @@
     // eventosEspeciales: eventos generales de la iglesia (NO son los eventos internos de cada ministerio)
     // { id, titulo, fecha: 'YYYY-MM-DD', hora, lugar, descripcion, creadoPor, creadoPorEmail }
     let eventosEspeciales = [];
+    // pronostico: docs 'semanal' y 'mensual' generados automáticamente (ver .github/workflows/pronostico.yml)
+    let pronosticoSemanal = null;
+    let pronosticoMensual = null;
+    let mapaEvangelismoInstancia = null;
 
     let tempFoto = null;
     let minSeleccionadoId = null;
@@ -1348,6 +1408,18 @@
           historicoDiario = snap.docs.map(d => d.data());
           listenersListosParaSnapshot.historicoDiario = true;
           registrarSnapshotDiario();
+        }, () => {})
+      );
+
+      listenersFirestoreActivos.push(
+        db.collection('pronostico').onSnapshot(snap => {
+          snap.docs.forEach(d => {
+            if (d.id === 'semanal') pronosticoSemanal = d.data();
+            if (d.id === 'mensual') pronosticoMensual = d.data();
+          });
+          if (document.getElementById('view-pronostico') && !document.getElementById('view-pronostico').classList.contains('hidden')) {
+            renderPronostico();
+          }
         }, () => {})
       );
     }
@@ -2362,6 +2434,11 @@
         document.getElementById('page-title').innerText = 'Comunicación';
         document.getElementById('page-subtitle').innerText = 'Canales de mensajería y asistente de difusión';
         generarMensajeAsistente();
+      } else if (tabName === 'pronostico') {
+        document.getElementById('view-pronostico').classList.remove('hidden');
+        document.getElementById('page-title').innerText = 'Pronóstico';
+        document.getElementById('page-subtitle').innerText = 'Estimación de asistencia y mejores días para evangelismo';
+        renderPronostico();
       } else {
         const viewEl = document.getElementById(`view-${tabName}`);
         if(viewEl) viewEl.classList.remove('hidden');
@@ -2977,7 +3054,7 @@
     /* ============ PERMISOS POR ROL ============ */
 
     const NAV_POR_ROL = {
-      'Anfitrión Súper Admin': ['dashboard', 'miembros', 'lideres', 'asistencia', 'consolidacion', 'grupos', 'ministerios', 'comunicaciones', 'eventos'],
+      'Anfitrión Súper Admin': ['dashboard', 'miembros', 'lideres', 'asistencia', 'consolidacion', 'grupos', 'ministerios', 'comunicaciones', 'eventos', 'pronostico'],
       'Líder': ['miembros', 'asistencia', 'eventos'],
       'Consolidador': ['consolidacion', 'eventos']
     };
@@ -3641,6 +3718,167 @@
           .then(() => cerrarModalEventoEspecial())
           .catch(err => alert('No se pudo eliminar: ' + err.message));
       }
+    }
+
+    /* ============ PRONÓSTICO (asistencia estimada + mejores días/zonas para evangelismo) ============ */
+    // Los datos de esta sección los escribe un script automático (ver .github/workflows/pronostico.yml)
+    // que corre todos los viernes y el día 1 de cada mes. La app solo LEE de la colección 'pronostico'.
+
+    const TRES_ARROYOS_COORDS = { lat: -38.3739, lng: -60.2761 };
+
+    const ETIQUETAS_DIA_PRONOSTICO = {
+      viernes: { titulo: 'Viernes', icono: '🌆' },
+      sabado: { titulo: 'Sábado', icono: '🎉' },
+      domingoManana: { titulo: 'Domingo Mañana', icono: '🌅' },
+      domingoNoche: { titulo: 'Domingo Noche', icono: '🌙' }
+    };
+
+    function mostrarSubPronostico(tipo) {
+      const esAsistencia = tipo === 'asistencia';
+      document.getElementById('sub-pronostico-asistencia').classList.toggle('hidden', !esAsistencia);
+      document.getElementById('sub-pronostico-evangelismo').classList.toggle('hidden', esAsistencia);
+      document.getElementById('btn-sub-pronostico-asistencia').className = 'px-4 py-2 rounded-xl text-sm font-semibold transition ' + (esAsistencia ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100');
+      document.getElementById('btn-sub-pronostico-evangelismo').className = 'px-4 py-2 rounded-xl text-sm font-semibold transition ' + (!esAsistencia ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100');
+
+      if (!esAsistencia) {
+        // El mapa necesita que su contenedor ya esté visible para calcular bien el tamaño
+        setTimeout(() => renderPronosticoEvangelismo(), 50);
+      }
+    }
+
+    function renderPronostico() {
+      renderPronosticoAsistencia();
+      const evangelismoVisible = !document.getElementById('sub-pronostico-evangelismo').classList.contains('hidden');
+      if (evangelismoVisible) renderPronosticoEvangelismo();
+    }
+
+    function avisoParaEstado(estado) {
+      if (estado === 'sin_saldo') return '⚠️ No se pudo generar el análisis con IA de esta semana — falta cargar saldo en la cuenta de IA. Mientras tanto, esto muestra solo la estimación basada en el clima.';
+      if (estado === 'pendiente') return '⏳ El pronóstico con IA todavía no está configurado.';
+      if (estado === 'solo_clima') return 'ℹ️ Esta estimación usa solo el clima (la IA aún no está disponible).';
+      return null;
+    }
+
+    function renderPronosticoAsistencia() {
+      const fechaEl = document.getElementById('pronostico-asistencia-fecha');
+      const avisoEl = document.getElementById('pronostico-asistencia-aviso');
+      const avisoTextoEl = document.getElementById('pronostico-asistencia-aviso-texto');
+      const cont = document.getElementById('tarjetas-pronostico-asistencia');
+      if (!fechaEl || !cont) return;
+
+      if (!pronosticoSemanal) {
+        fechaEl.textContent = 'Todavía no se generó ningún pronóstico. Se genera automáticamente todos los viernes.';
+        avisoEl.classList.add('hidden');
+        cont.innerHTML = '';
+        return;
+      }
+
+      fechaEl.textContent = 'Generado el ' + (pronosticoSemanal.generadoEn || '—');
+
+      const aviso = avisoParaEstado(pronosticoSemanal.estado);
+      if (aviso) {
+        avisoTextoEl.textContent = aviso;
+        avisoEl.classList.remove('hidden');
+      } else {
+        avisoEl.classList.add('hidden');
+      }
+
+      const dias = pronosticoSemanal.dias || {};
+      cont.innerHTML = Object.keys(ETIQUETAS_DIA_PRONOSTICO).map(clave => {
+        const info = ETIQUETAS_DIA_PRONOSTICO[clave];
+        const d = dias[clave];
+        if (!d) {
+          return `
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+              <p class="text-xs font-semibold text-slate-400 uppercase">${info.icono} ${info.titulo}</p>
+              <p class="text-sm text-slate-400 mt-3">Sin datos todavía</p>
+            </div>`;
+        }
+        return `
+          <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+            <p class="text-xs font-semibold text-slate-400 uppercase">${info.icono} ${info.titulo}</p>
+            <h3 class="text-3xl font-bold text-slate-800 mt-2">${d.estimado != null ? d.estimado : '—'}</h3>
+            <p class="text-[11px] text-slate-400">personas estimadas</p>
+            ${d.clima ? `<p class="text-xs text-slate-500 mt-3">🌤️ ${d.clima.descripcion || ''} · ${d.clima.tempMax != null ? Math.round(d.clima.tempMax) + '°' : ''}${d.clima.probLluvia != null ? ' · ' + d.clima.probLluvia + '% lluvia' : ''}</p>` : ''}
+            ${d.motivo ? `<p class="text-xs text-slate-400 mt-2">${d.motivo}</p>` : ''}
+          </div>`;
+      }).join('');
+    }
+
+    function renderPronosticoEvangelismo() {
+      const diaEl = document.getElementById('pronostico-evangelismo-dia');
+      const motivoEl = document.getElementById('pronostico-evangelismo-motivo');
+      const avisoEl = document.getElementById('pronostico-evangelismo-aviso');
+      const avisoTextoEl = document.getElementById('pronostico-evangelismo-aviso-texto');
+      const listaZonasEl = document.getElementById('lista-zonas-evangelismo');
+      const mensualTituloEl = document.getElementById('pronostico-mensual-titulo');
+      const mensualResumenEl = document.getElementById('pronostico-mensual-resumen');
+      const listaMensualEl = document.getElementById('lista-mensual-dias');
+      if (!diaEl) return;
+
+      const evangelismo = pronosticoSemanal ? pronosticoSemanal.evangelismo : null;
+
+      if (!evangelismo) {
+        diaEl.textContent = '—';
+        motivoEl.textContent = 'Todavía no se generó ningún pronóstico. Se genera automáticamente todos los viernes.';
+        avisoEl.classList.add('hidden');
+        listaZonasEl.innerHTML = '';
+      } else {
+        diaEl.textContent = evangelismo.mejorDia || '—';
+        motivoEl.textContent = evangelismo.motivo || '';
+
+        const aviso = avisoParaEstado(pronosticoSemanal.estado);
+        if (aviso) {
+          avisoTextoEl.textContent = aviso;
+          avisoEl.classList.remove('hidden');
+        } else {
+          avisoEl.classList.add('hidden');
+        }
+
+        const zonas = evangelismo.zonas || [];
+        listaZonasEl.innerHTML = zonas.length ? zonas.map(z => `
+          <div class="border border-slate-200/80 rounded-xl p-3">
+            <p class="font-semibold text-slate-800 text-sm">📍 ${z.nombre}</p>
+            <p class="text-xs text-slate-500">${z.horario || ''}</p>
+            ${z.motivo ? `<p class="text-xs text-slate-400 mt-1">${z.motivo}</p>` : ''}
+          </div>
+        `).join('') : '<p class="text-sm text-slate-400">Sin zonas sugeridas todavía.</p>';
+
+        renderMapaEvangelismo(zonas);
+      }
+
+      if (pronosticoMensual) {
+        mensualTituloEl.textContent = pronosticoMensual.mes || '';
+        mensualResumenEl.textContent = pronosticoMensual.resumen || '';
+        const dias = pronosticoMensual.mejoresDiasEvangelismo || [];
+        listaMensualEl.innerHTML = dias.map(d => `
+          <div class="flex items-start gap-2 text-sm">
+            <span class="font-semibold text-slate-700">${d.fecha}</span>
+            <span class="text-slate-500">${d.motivo || ''}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    function renderMapaEvangelismo(zonas) {
+      const el = document.getElementById('mapa-evangelismo');
+      if (!el || typeof L === 'undefined') return;
+
+      if (!mapaEvangelismoInstancia) {
+        mapaEvangelismoInstancia = L.map(el).setView([TRES_ARROYOS_COORDS.lat, TRES_ARROYOS_COORDS.lng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap'
+        }).addTo(mapaEvangelismoInstancia);
+        mapaEvangelismoInstancia.__marcadores = [];
+      }
+
+      mapaEvangelismoInstancia.__marcadores.forEach(m => mapaEvangelismoInstancia.removeLayer(m));
+      mapaEvangelismoInstancia.__marcadores = (zonas || []).filter(z => z.lat && z.lng).map(z => {
+        return L.marker([z.lat, z.lng]).addTo(mapaEvangelismoInstancia)
+          .bindPopup(`<strong>${z.nombre}</strong><br>${z.horario || ''}`);
+      });
+
+      setTimeout(() => mapaEvangelismoInstancia.invalidateSize(), 100);
     }
 
     /* ============ ASISTENTE DE MENSAJES (PLANTILLAS PARA COMUNICACIÓN) ============ */

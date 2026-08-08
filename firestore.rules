@@ -115,6 +115,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Pronóstico de asistencia y evangelismo: lo escribe únicamente el script automático
+    // (GitHub Actions) usando una cuenta de servicio con acceso de administrador, que no pasa
+    // por estas reglas. Ningún usuario de la app puede escribir acá, solo leer.
+    match /pronostico/{doc} {
+      allow read: if estaAprobado();
+      allow write: if isAdmin();
+    }
+
     // Eventos especiales del calendario: los crea admin o líder; solo el admin o quien lo creó
     // puede editarlo o borrarlo. Todos los aprobados (admin, líder, consolidador) pueden verlos.
     match /eventosEspeciales/{id} {

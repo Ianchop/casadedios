@@ -1,0 +1,9 @@
+{
+  "name": "casa-de-dios-pronostico",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
+    "firebase-admin": "^13.5.0"
+  }
+}

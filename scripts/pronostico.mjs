@@ -16,7 +16,11 @@ import admin from 'firebase-admin';
 const TRES_ARROYOS = { lat: -38.3739, lng: -60.2761 };
 const TIMEZONE = 'America/Argentina/Buenos_Aires';
 const GEMINI_MODEL = 'gemini-3.5-flash-lite';
-const USAR_BUSQUEDA_WEB = false; // DIAGNÓSTICO TEMPORAL: probar si el 429 es por la herramienta de búsqueda
+// La búsqueda web (Grounding con Google Search) en esta cuenta nueva del nivel gratuito
+// devuelve 429 (pide habilitar facturación en Google Cloud, aunque el uso quedaría en $0).
+// Mientras tanto queda desactivada: la IA usa su conocimiento general en vez de buscar en
+// internet. Poner en `true` si más adelante se habilita la facturación en el proyecto de Gemini.
+const USAR_BUSQUEDA_WEB = false;
 
 // No hay un conteo real de asistencia, así que no mostramos un número:
 // mostramos una TENDENCIA ("más/menos/similar a lo habitual"). Estos valores
@@ -121,11 +125,11 @@ async function generarSemanal(db) {
 Asistencia habitual aproximada por franja: ${contextoHabitual}.
 Tendencia calculada solo por el clima de esta semana: ${contextoClima}.
 
-Tarea 1 — Asistencia: para viernes, sábado, domingo a la mañana y domingo a la noche de esta semana, buscá noticias y eventos locales de Tres Arroyos (ferias, fiestas patronales, eventos deportivos, feriados) que puedan influir en la asistencia, además del clima ya calculado. Para cada una de las 4 franjas, indicá una tendencia ("mas", "menos" o "normal") respecto a lo habitual y un mensaje corto explicando por qué. Si no encontrás nada relevante más allá del clima, mantené la tendencia igual a la calculada por clima.
+Tarea 1 — Asistencia: para viernes, sábado, domingo a la mañana y domingo a la noche de esta semana, considerá noticias y eventos locales de Tres Arroyos (ferias, fiestas patronales, eventos deportivos, feriados) que puedan influir en la asistencia, además del clima ya calculado — buscá en internet si tenés esa herramienta disponible; si no, basate en tu conocimiento general y el calendario. Para cada una de las 4 franjas, indicá una tendencia ("mas", "menos" o "normal") respecto a lo habitual y un mensaje corto explicando por qué. Si no encontrás nada relevante más allá del clima, mantené la tendencia igual a la calculada por clima.
 
-Tarea 2 — Evangelismo: buscá noticias y eventos locales de Tres Arroyos para la semana del ${clima[0].fecha} al ${clima[6].fecha}. Con esa información, elegí UNA fecha de esta lista como la mejor para salir a evangelizar en lugares PÚBLICOS: ${candidatos.join(', ')}. Sugerí también 2 o 3 zonas públicas reales de Tres Arroyos (plazas, veredas céntricas, parques, costanera — NUNCA lugares privados como canchas de fútbol privadas o clubes) con el horario aproximado de mayor circulación de gente y sus coordenadas geográficas aproximadas (latitud/longitud).
+Tarea 2 — Evangelismo: considerá noticias y eventos locales de Tres Arroyos para la semana del ${clima[0].fecha} al ${clima[6].fecha}. Con esa información, elegí UNA fecha de esta lista como la mejor para salir a evangelizar en lugares PÚBLICOS: ${candidatos.join(', ')}. Sugerí también 2 o 3 zonas públicas reales de Tres Arroyos (plazas, veredas céntricas, parques, costanera — NUNCA lugares privados como canchas de fútbol privadas o clubes) con el horario aproximado de mayor circulación de gente y sus coordenadas geográficas aproximadas (latitud/longitud).
 
-Si no encontrás información específica, basate en el conocimiento general de la ciudad, el calendario y el clima. No inventes eventos que no existan.`;
+Si tenés acceso a búsqueda en internet, usalo. Si no encontrás información específica (o no tenés esa herramienta), basate en el conocimiento general de la ciudad, el calendario y el clima. No inventes eventos que no existan, y no afirmes haber buscado algo si no lo hiciste.`;
       const schemaDia = {
         type: 'object',
         properties: {
@@ -233,7 +237,7 @@ async function generarMensual(db) {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey });
     const prompt = `Sos un asistente que ayuda a una iglesia evangélica ("Casa De Dios") en Tres Arroyos, Argentina, a planificar el mes de evangelismo callejero.
-Buscá noticias, feriados y eventos locales de Tres Arroyos para ${mesNombre}.
+Considerá noticias, feriados y eventos locales de Tres Arroyos para ${mesNombre} (buscando en internet si tenés esa herramienta disponible, o basándote en tu conocimiento general y el calendario si no).
 Escribí un resumen breve (2 a 3 frases) sobre el pronóstico general del mes y qué se puede esperar para salir a evangelizar en la calle.
 Listá los eventos locales destacados que encuentres (nombre y fecha aproximada).
 Sugerí entre 3 y 5 fechas específicas de ese mes (excluyendo domingos) que parezcan buenas para salir a evangelizar en lugares públicos, con un motivo breve cada una.`;
@@ -344,7 +348,7 @@ Lugar: ${ev.lugar || 'no especificado'}
 Fechas: del ${ev.fechaInicio} al ${ev.fechaFin || ev.fechaInicio}
 ${contextoClima}
 
-Buscá noticias locales de Tres Arroyos, el contexto estacional para esas fechas, feriados, otros eventos que puedan competir o sumar público, y cualquier información relevante sobre "${ev.lugar}" si es un predio o lugar conocido de la ciudad (por ejemplo, si coincide con una fiesta o feria tradicional del lugar).
+Considerá noticias locales de Tres Arroyos, el contexto estacional para esas fechas, feriados, otros eventos que puedan competir o sumar público, y cualquier información relevante sobre "${ev.lugar}" si es un predio o lugar conocido de la ciudad (por ejemplo, si coincide con una fiesta o feria tradicional del lugar) — buscando en internet si tenés esa herramienta disponible, o basándote en tu conocimiento general si no.
 Con toda esa información, evaluá la expectativa de asistencia para este evento (alta, media o baja) y escribí un mensaje breve (3 a 4 frases) explicando tu análisis y, si corresponde, alguna recomendación práctica.`;
 
       const analisis = await generarConIA(ai, prompt, schema);

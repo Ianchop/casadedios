@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.68.0",
+    "@google/genai": "^1.0.0",
     "firebase-admin": "^13.5.0"
   }
 }

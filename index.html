@@ -1236,7 +1236,7 @@
       <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
         <div>
           <h3 class="text-lg font-bold text-slate-800">Nuevo evento de evangelismo</h3>
-          <p class="text-xs text-slate-400 mt-1">La IA va a analizar la expectativa de asistencia dentro de la próxima hora. Cada análisis tiene un costo aproximado de unos centavos de dólar.</p>
+          <p class="text-xs text-slate-400 mt-1">La IA va a analizar la expectativa de asistencia dentro de la próxima hora, usando la cuota gratuita — sin costo.</p>
         </div>
         <div class="space-y-3">
           <div>
@@ -3815,7 +3815,7 @@
     }
 
     function avisoParaEstado(estado) {
-      if (estado === 'sin_saldo') return '⚠️ No se pudo generar el análisis con IA de esta semana — falta cargar saldo en la cuenta de IA. Mientras tanto, esto muestra solo la estimación basada en el clima.';
+      if (estado === 'sin_saldo') return '⚠️ No se pudo generar el análisis con IA de esta semana — probablemente se alcanzó el límite gratuito por ahora. Mientras tanto, esto muestra solo la estimación basada en el clima.';
       if (estado === 'pendiente') return '⏳ El pronóstico con IA todavía no está configurado.';
       if (estado === 'solo_clima') return 'ℹ️ Esta estimación usa solo el clima (la IA aún no está disponible).';
       return null;
@@ -3959,9 +3959,9 @@
           cuerpoAnalisis = `
             <p class="text-sm font-bold mt-2 ${info.color}">${info.icono} ${info.etiqueta}</p>
             <p class="text-sm text-slate-600 mt-1">${ev.analisis.mensaje || ''}</p>
-            <p class="text-[11px] text-slate-400 mt-2">💵 Esta consulta con IA costó aproximadamente $0.03 a $0.08 USD.</p>`;
+            <p class="text-[11px] text-slate-400 mt-2">💵 Esta consulta usó la cuota gratuita de IA — no tuvo costo.</p>`;
         } else if (ev.estado === 'sin_saldo') {
-          cuerpoAnalisis = `<p class="text-sm text-amber-600 mt-2">⚠️ No se pudo analizar por falta de saldo en la cuenta de IA.</p>`;
+          cuerpoAnalisis = `<p class="text-sm text-amber-600 mt-2">⚠️ No se pudo analizar (probablemente se alcanzó el límite gratuito de IA por ahora). Se va a reintentar automáticamente.</p>`;
         } else {
           cuerpoAnalisis = `<p class="text-sm text-slate-400 mt-2">⏳ Analizando... el resultado aparece automáticamente en menos de una hora.</p>`;
         }

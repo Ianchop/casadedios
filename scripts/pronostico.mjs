@@ -5,16 +5,17 @@
 //   - Cada hora:                     `node pronostico.mjs eventos` (analiza eventos/campañas
 //                                     de evangelismo cargados a mano, para cualquier fecha)
 //
-// Usa Open-Meteo (gratis, sin clave) para el clima y, si hay saldo configurado,
-// la API de Anthropic (con búsqueda web) para sugerir el mejor día/zonas de
-// evangelismo y el resumen mensual. Si falta ANTHROPIC_API_KEY o falla por
-// falta de saldo, el documento se guarda igual con la parte de clima y un
-// estado que la app muestra como aviso, sin romper nada.
+// Usa Open-Meteo (gratis, sin clave) para el clima y, si hay una clave configurada,
+// la API gratuita de Gemini (con búsqueda web) para sugerir el mejor día/zonas de
+// evangelismo y el resumen mensual. Si falta GEMINI_API_KEY o se agota la cuota
+// gratuita, el documento se guarda igual con la parte de clima y un estado que
+// la app muestra como aviso, sin romper nada.
 
 import admin from 'firebase-admin';
 
 const TRES_ARROYOS = { lat: -38.3739, lng: -60.2761 };
 const TIMEZONE = 'America/Argentina/Buenos_Aires';
+const GEMINI_MODEL = 'gemini-3.6-flash';
 
 // No hay un conteo real de asistencia, así que no mostramos un número:
 // mostramos una TENDENCIA ("más/menos/similar a lo habitual"). Estos valores
@@ -77,18 +78,15 @@ function calcularDiaTendencia(clima) {
   };
 }
 
-async function generarConIA(anthropic, model, prompt, schema) {
-  const response = await anthropic.messages.create({
-    model,
-    max_tokens: 8192,
-    tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }],
-    output_config: { format: { type: 'json_schema', schema } },
-    messages: [{ role: 'user', content: prompt }],
+async function generarConIA(ai, prompt, schema) {
+  const interaction = await ai.interactions.create({
+    model: GEMINI_MODEL,
+    input: prompt,
+    tools: [{ type: 'google_search' }],
+    response_format: { type: 'text', mime_type: 'application/json', schema },
   });
-  if (response.stop_reason === 'refusal') throw new Error('La IA rechazó la consulta');
-  const textBlock = response.content.find((b) => b.type === 'text');
-  if (!textBlock) throw new Error(`La IA no devolvió una respuesta de texto (stop_reason: ${response.stop_reason})`);
-  return JSON.parse(textBlock.text);
+  if (!interaction.output_text) throw new Error('La IA no devolvió una respuesta de texto');
+  return JSON.parse(interaction.output_text);
 }
 
 async function generarSemanal(db) {
@@ -106,12 +104,12 @@ async function generarSemanal(db) {
   let dias = diasClima;
   let evangelismo = null;
   let estado = 'pendiente';
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (apiKey) {
     try {
-      const { default: Anthropic } = await import('@anthropic-ai/sdk');
-      const anthropic = new Anthropic({ apiKey });
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({ apiKey });
       const candidatos = clima.filter((_, i) => i !== 2).map((c) => c.fecha); // toda la semana menos el domingo
       const contextoHabitual = Object.entries(ASISTENCIA_HABITUAL)
         .map(([clave, n]) => `${ETIQUETAS_DIA[clave]}: unas ${n} personas`).join('; ');
@@ -172,7 +170,7 @@ Si no encontrás información específica, basate en el conocimiento general de 
         required: ['diasAjuste', 'evangelismo'],
         additionalProperties: false,
       };
-      const resultado = await generarConIA(anthropic, 'claude-sonnet-5', prompt, schema);
+      const resultado = await generarConIA(ai, prompt, schema);
       // Conservamos el objeto "clima" (viene de Open-Meteo) y usamos la tendencia/mensaje de la IA.
       dias = {
         viernes: { ...diasClima.viernes, ...resultado.diasAjuste.viernes },
@@ -209,7 +207,7 @@ Si no encontrás información específica, basate en el conocimiento general de 
 }
 
 async function generarMensual(db) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   const ahora = new Date();
   const mesNombre = ahora.toLocaleDateString('es-AR', { month: 'long', year: 'numeric', timeZone: TIMEZONE });
 
@@ -222,7 +220,7 @@ async function generarMensual(db) {
       eventosDestacados: [],
       mejoresDiasEvangelismo: [],
     });
-    console.log('Pronóstico mensual: sin ANTHROPIC_API_KEY, queda pendiente.');
+    console.log('Pronóstico mensual: sin GEMINI_API_KEY, queda pendiente.');
     return;
   }
 
@@ -230,8 +228,8 @@ async function generarMensual(db) {
   let datos = { resumen: '', eventosDestacados: [], mejoresDiasEvangelismo: [] };
 
   try {
-    const { default: Anthropic } = await import('@anthropic-ai/sdk');
-    const anthropic = new Anthropic({ apiKey });
+    const { GoogleGenAI } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey });
     const prompt = `Sos un asistente que ayuda a una iglesia evangélica ("Casa De Dios") en Tres Arroyos, Argentina, a planificar el mes de evangelismo callejero.
 Buscá noticias, feriados y eventos locales de Tres Arroyos para ${mesNombre}.
 Escribí un resumen breve (2 a 3 frases) sobre el pronóstico general del mes y qué se puede esperar para salir a evangelizar en la calle.
@@ -263,7 +261,7 @@ Sugerí entre 3 y 5 fechas específicas de ese mes (excluyendo domingos) que par
       required: ['resumen', 'eventosDestacados', 'mejoresDiasEvangelismo'],
       additionalProperties: false,
     };
-    datos = await generarConIA(anthropic, 'claude-sonnet-5', prompt, schema);
+    datos = await generarConIA(ai, prompt, schema);
   } catch (err) {
     console.error('Falló el análisis mensual con IA:', err.message);
     estado = 'sin_saldo';
@@ -305,19 +303,21 @@ async function obtenerClimaParaFecha(fechaISO) {
 }
 
 async function generarEventos(db) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  const snap = await db.collection('eventosEvangelismo').where('estado', '==', 'pendiente').get();
+  const apiKey = process.env.GEMINI_API_KEY;
+  // Reintenta también los que fallaron antes (probablemente por límite de cuota gratuita),
+  // no solo los recién creados.
+  const snap = await db.collection('eventosEvangelismo').where('estado', 'in', ['pendiente', 'sin_saldo']).get();
   if (snap.empty) {
     console.log('No hay eventos de evangelismo pendientes de analizar.');
     return;
   }
   if (!apiKey) {
-    console.log(`Hay ${snap.size} evento(s) pendiente(s), pero falta ANTHROPIC_API_KEY. Quedan sin analizar por ahora.`);
+    console.log(`Hay ${snap.size} evento(s) pendiente(s), pero falta GEMINI_API_KEY. Quedan sin analizar por ahora.`);
     return;
   }
 
-  const { default: Anthropic } = await import('@anthropic-ai/sdk');
-  const anthropic = new Anthropic({ apiKey });
+  const { GoogleGenAI } = await import('@google/genai');
+  const ai = new GoogleGenAI({ apiKey });
 
   const schema = {
     type: 'object',
@@ -345,7 +345,7 @@ ${contextoClima}
 Buscá noticias locales de Tres Arroyos, el contexto estacional para esas fechas, feriados, otros eventos que puedan competir o sumar público, y cualquier información relevante sobre "${ev.lugar}" si es un predio o lugar conocido de la ciudad (por ejemplo, si coincide con una fiesta o feria tradicional del lugar).
 Con toda esa información, evaluá la expectativa de asistencia para este evento (alta, media o baja) y escribí un mensaje breve (3 a 4 frases) explicando tu análisis y, si corresponde, alguna recomendación práctica.`;
 
-      const analisis = await generarConIA(anthropic, 'claude-sonnet-5', prompt, schema);
+      const analisis = await generarConIA(ai, prompt, schema);
       await doc.ref.update({ estado: 'analizado', analisis: { ...analisis, generadoEn: new Date().toISOString().split('T')[0] } });
       console.log(`Evento "${ev.titulo}" analizado: ${analisis.expectativa}`);
     } catch (err) {

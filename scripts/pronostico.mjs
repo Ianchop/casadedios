@@ -15,7 +15,7 @@ import admin from 'firebase-admin';
 
 const TRES_ARROYOS = { lat: -38.3739, lng: -60.2761 };
 const TIMEZONE = 'America/Argentina/Buenos_Aires';
-const GEMINI_MODEL = 'gemini-3.6-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 // No hay un conteo real de asistencia, así que no mostramos un número:
 // mostramos una TENDENCIA ("más/menos/similar a lo habitual"). Estos valores
